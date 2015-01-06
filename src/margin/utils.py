@@ -4,75 +4,6 @@ from cactus.bar import cactus_expectationMaximisation
 from cactus.bar.cactus_expectationMaximisation import Hmm, SYMBOL_NUMBER
 import numpy as np
 
-class UniqueList(collections.MutableSet):
-    def __init__(self, iterable=None):
-        self.end = end = [] 
-        end += [None, end, end]         # sentinel node for doubly linked list
-        self.map = {}                   # key --> [key, prev, next]
-        if iterable is not None:
-            self |= iterable
-    def __len__(self):
-        return len(self.map)
-    def __contains__(self, key):
-        return key in self.map
-    def add(self, key):
-        if key not in self.map:
-            end = self.end
-            curr = end[1]
-            curr[2] = end[1] = self.map[key] = [key, curr, end]
-    def discard(self, key):
-        if key in self.map:        
-            key, prev, next = self.map.pop(key)
-            prev[2] = next
-            next[1] = prev
-    def __iter__(self):
-        end = self.end
-        curr = end[2]
-        while curr is not end:
-            yield curr[0]
-            curr = curr[2]
-    def __reversed__(self):
-        end = self.end
-        curr = end[1]
-        while curr is not end:
-            yield curr[0]
-            curr = curr[1]
-    def pop(self, last=True):
-        if not self:
-            raise KeyError('set is empty')
-        key = self.end[1][0] if last else self.end[2][0]
-        self.discard(key)
-        return key
-    def remove(self, last=True):
-        if not self:
-            raise KeyError('set is empty')
-        key = self.end[1][0] if last else self.end[2][0]
-        self.discard(key)
-    def __getitem__(self, index):
-        if not self:
-            raise KeyError('set is empty')
-        elif index >= len(self.map):
-            raise IndexError('UniqueList index out of range')
-        elif index < 0:
-            raise IndexError('UniqueList cannot handle negative indices because Ian is lazy')
-        end = self.end
-        if index == len(self.map) - 1:
-            #fast way to get last element
-            return end[1][0]
-        curr = end[2]
-        for i in xrange(index):
-            curr = curr[2]
-        return curr[0]
-    def __repr__(self):
-        if not self:
-            return '%s()' % (self.__class__.__name__,)
-        return '%s(%r)' % (self.__class__.__name__, list(self))
-    def __eq__(self, other):
-        if isinstance(other, UniqueList):
-            return len(self) == len(other) and list(self) == list(other)
-        return set(self) == set(other)
-
-
 def pathToBaseNanoporeDir():
     import marginAlign
     i = absSymPath(__file__)
@@ -178,46 +109,6 @@ def getExonerateCigarFormatString(alignedRead, sam):
     pA = cigarReadFromString(completeCigarString) #This checks it's an okay cigar
     assert sum([ op.length for op in pA.operationList if op.type == PairwiseAlignment.PAIRWISE_MATCH ]) == len([ readPos for readPos, refPos in alignedRead.aligned_pairs if readPos != None and refPos != None ])
     return completeCigarString
-
-"""
-def getGlobalAlignmentExonerateCigarFormatString(alignedRead, sam, refSeq, readSeq):
-    #Gets a complete exonerate like cigar-string describing the sam line, but is global alignment (not in soft-clipped coordinates).
-    ops = []
-    matchLength = 0
-    for aP in AlignedPair.iterator(alignedRead, refSeq, readSeq):
-        deleteLength = aP.getPrecedingReadDeletionLength(globalAlignment=True)
-        insertLength = aP.getPrecedingReadInsertionLength(globalAlignment=True)
-        if (deleteLength > 0 or insertLength > 0) and matchLength > 0:
-            ops.append(("M", matchLength))
-            matchLength = 1
-            if deleteLength > 0:
-                ops.append(("D", deleteLength))
-            if insertLength > 0:
-                ops.append(("I", insertLength))
-        else:
-            matchLength += 1
-    if matchLength > 0:
-        ops.append(("M", matchLength))
-    cumulativeRefLength = sum(map(lambda x : 0 if x[0] == 'I' else x[1], ops))
-    cumulativeReadLength = sum(map(lambda x : 0 if x[0] == 'D' else x[1], ops))
-    assert cumulativeRefLength <= len(refSeq)
-    assert cumulativeReadLength <= len(readSeq)
-    if cumulativeRefLength < len(refSeq):
-        ops.append("D", len(refSeq) - cumulativeRefLength)
-    if cumulativeReadLength < len(readSeq):
-        ops.append("I", len(readSeq) - cumulativeReadLength)
-    assert sum(map(lambda x : 0 if x[0] == 'I' else x[1], ops)) == len(refSeq)
-    assert sum(map(lambda x : 0 if x[0] == 'D' else x[1], ops)) == len(readSeq)
-    
-    readCoordinates = ("%i 0 -" if alignedRead.is_reverse else "0 %i +") % len(readSeq)
-    completeCigarString = "cigar: %s %s %s %i %i + 1 %s" % (alignedRead.qname, readCoordinates,
-    sam.getrname(alignedRead.rname), 0, len(refSeq), " ".join(map(lambda x : "%s %i" % (x[0], x[1]), ops)))
-    
-    pA = cigarReadFromString(completeCigarString) #This checks it's an okay formatted cigar
-    assert sum([ op.length for op in pA.operationList if op.type == PairwiseAlignment.PAIRWISE_MATCH ]) == len([ readPos for readPos, refPos in alignedRead.aligned_pairs if readPos != None and refPos != None ])
-    
-    return completeCigarString
-"""
 
 def samToBamFile(samInputFile, bamOutputFile):
     """Converts a sam file to a bam file (sorted)

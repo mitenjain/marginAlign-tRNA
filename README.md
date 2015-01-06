@@ -24,7 +24,7 @@ To test the installation run:
 
     make test
     
-This will run demo sequences through marginAlign.
+This will run demo sequences through marginAlign and marginVar.
     
 ### Updating the installation
 To update a marginAlign installation, from the base directory type:
@@ -40,27 +40,19 @@ To access the help message type:
 
     marginAlign --help
 
-This will give you a full list of options.
+This will give you a full list of options. Most are related to the (jobTree)[https://github.com/benedictpaten/jobTree] options, which control how the script is executed. 
 
-To align a FASTQ file "input.fastq" and output the alignment to "output.sam" in SAM format with marginAlign do:
+To align a FASTQ file ("input.fastq") to a reference fasta file ("reference.fasta") and output the alignment in SAM format with marginAlign ("output.sam") do:
 
-    marginAlign input.fastq output.sam
-
-To instead output a BAM do:
-
-    marginAlign input.fastq output.bam --bamOutput
+    marginAlign input.fastq reference.fasta output.sam
 
 To enable EM training do, putting the trained model file in "output.hmm" do:
 
-    marginAlign input.fastq output.sam --em output.hmm
+    marginAlign input.fastq reference.fasta output.sam --em output.hmm
 
 To use a pretrained model "input.hmm" do:
 
-    marginAlign input.fastq output.sam --useModel input.hmm
-
-To realign an existing SAM file do:
-
-    marginAlign input.sam output.sam --realign
+    marginAlign input.fastq reference.fasta output.sam --useModel input.hmm
 
 ### Running marginVar
 
