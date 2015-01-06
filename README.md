@@ -1,13 +1,11 @@
-Code to analyse long read mappings, specifically tailored for Oxford Nanopore Reads.
+The marginAlign package can be used to align reads to a reference genome and call single nucleotide variations (SNVs). It is specifically tailored for Oxford Nanopore Reads.
+
+The package comes with two programs: marginAlign, a short read aligner, and marginVar, a program to call single nucleotide variations.
 
 ### Requirements
 * git
 * python 2.7
-* pysam
-* R 2.15.1 or newer
-* Lattice package for R (http://cran.r-project.org/web/packages/lattice/index.html)
 
-I'm pondering using virtualenv to eliminate the pysam dependency and allow other packages to be installed, but then you need to have virtualenv installed.
 
 ### Installation
 To install the code run:
@@ -18,56 +16,60 @@ To install the code run:
     git submodule update --init
     make
 
+This will build the code. Two executables: "marginAlign" and "marginVar" are in the base directory
+of the package. Place these binaries on your path if you wish to use them outside of the base directory.
+
 ### Testing
 To test the installation run:
 
     make test
     
-This will run the demo sequences across the analyses in the test/ directory. The test sets mirrors the process of analysing your own data (see [Analysing your own data](https://github.com/mitenjain/nanopore/master/README.md#analysing-your-own-data)). 
+This will run demo sequences through marginAlign.
     
 ### Updating the installation
-To update a progressiveCactus installation, from the nanopore base directory type:
+To update a marginAlign installation, from the base directory type:
 
     git pull
     git submodule update --init
     make clean
     make
 
-### Analysing your own data
-The inputs are:
-(1) One or more read files, in FASTQ format. These should be placed in the directory *nanopore/readFastaFiles/<X>/*.
-Where <X> is the readType being analyzed. Generally, this is in the format 2D/, complement/, and template/.
-(2) One or more reference genomes, in FASTA format. These should be placed in the directory *nanopore/referenceFastaFiles*.
+### Running marginAlign
 
-For each possible pair of read file, reference genome and mapping algorithm an experiment directory will be created in the *nanopore/output* directory.
+To access the help message type:
 
-To run the pipeline from the nanopore base directory type:
+    marginAlign --help
 
-    make run
-    
-To clean up an old run type:
+This will give you a full list of options.
 
-    make clean
+To align a FASTQ file "input.fastq" and output the alignment to "output.sam" in SAM format with marginAlign do:
 
-To see and control which mappers and analyses are being run edit lines 37 and 66 of the src/pipeline.py script.
+    marginAlign input.fastq output.sam
 
-###Setting up BLAST
-Additionally, if you would like to BLAST the unmapped reads against NT (NCBI nucleotide database) you need to have BLAST installed with the BLASTDB environmental variable set to wherever you have stored the NT database. In addition, you want the taxonomy database so that the hits make sense.
+To instead output a BAM do:
 
-You can download blastn from here:
-ftp://ftp.ncbi.nlm.nih.gov/blast/executables/blast+/LATEST/
-You will want to move blastn to somewhere that is in your path.
-Second, set the environmental variable BLASTDB:
-```export BLASTDB=:/path/to/blast/db/``` (you will want this in your bashrc)
-Finally, download and untar all of the databases to your BLASTDB path:
-ftp://ftp.ncbi.nlm.nih.gov/blast/db/nt.**.tar.gz
-ftp://ftp.ncbi.nlm.nih.gov/blast/db/taxdb.tar.gz
+    marginAlign input.fastq output.bam --bamOutput
 
-For all of the (19) nt files, you have to untar separately. Thanks NCBI. Dirty solution:
-```for i in `echo $BLASTDB | cut -d ":" -f 2`*.tar.gz; do tar zxvf $i; done``` 
+To enable EM training do, putting the trained model file in "output.hmm" do:
 
-###Scripts
-There is also a scripts directory where scripts can be dropped to analyze pipeline results outside of the pipeline. The jobTree can still be used, if you design your controlling shell script to change the paths as shown in the currently only external script, run_muscle.sh. These scripts will often depend on the directory structure of the pipeline to find sam files, xml files, etc.
+    marginAlign input.fastq output.sam --em output.hmm
 
-###Current scripts
-`run_muscle.sh` - has three inputs: `--template_sam`, `--twoD_sam`, `--complement_sam`. Takes these three sam files and looks for all read and reference files that these reads came from, and determines which reads were mappable as 2D but not mappable as template/complement. Then, the region of the reference where the 2D read aligned is extracted and MUSCLE is ran to try and get a global alignment between the template and complement and the corresponding 2D aligned region.
+To use a pretrained model "input.hmm" do:
+
+    marginAlign input.fastq output.sam --useModel input.hmm
+
+To realign an existing SAM file do:
+
+    marginAlign input.sam output.sam --realign
+
+### Running marginVar
+
+To call single nucleotide variations from an existing alignment ("input.sam") sam file and the output ("output.vcf"):
+
+    marginVar input.sam output.vcf 
+
+To NOT marginalise over the read alignments do:
+
+    marginVar input.sam output.vcf --noMargin
+
+### Citing marginAlign/marginVar
