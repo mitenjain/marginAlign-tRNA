@@ -61,11 +61,7 @@ class TestCase(unittest.TestCase):
         validateSam("./tests/test.sam")
 
         # Check if output.hmm files were written
-        if os.path.isfile("./tests/output.hmm"):
-            print "Output hmm file successful"
-        else:
-            print "No output hmm file, terminating test"
-            sys.exit()
+        self.assertTrue(os.path.isfile("./tests/output.hmm"))
 
         # Clean up
         print "Cleaning files"
