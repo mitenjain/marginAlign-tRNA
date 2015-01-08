@@ -48,6 +48,7 @@ class TestCase(unittest.TestCase):
         validateSam("./tests/test.sam")
 
         # Clean up
+        print "Cleaning files"
         os.system("rm -rf tests/test.sam testJobTree")
 
 
@@ -66,6 +67,7 @@ class TestCase(unittest.TestCase):
             print "No output hmm file"
 
         # Clean up
+        print "Cleaning files"
         os.system("rm -rf tests/test.sam testJobTree tests/output.hmm*")
 
 
@@ -85,6 +87,7 @@ class TestCase(unittest.TestCase):
         validateSam("./tests/test.sam")
 
         # Clean up
+        print "Cleaning files"
         os.system("rm -rf tests/test.sam testJobTree")
 
 
