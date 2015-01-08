@@ -24,7 +24,7 @@ marginAlign uses numpy and pysam. The system python coule be used if have these 
 
     virtualenv --no-site-packages --distribute env && source env/bin/activate && pip install -r requirements.txt
 
-Creation of a virtualenv requires that machine has an existing installation of pip [https://pip.pypa.io/en/latest/index.html] and virtualenv [https://virtualenv.pypa.io/en/latest/index.html].
+Creation of a virtual environment requires that machine has an existing installation of pip [https://pip.pypa.io/en/latest/index.html] and virtualenv [https://virtualenv.pypa.io/en/latest/index.html].
 
 ### Testing
 To test the installation run:
