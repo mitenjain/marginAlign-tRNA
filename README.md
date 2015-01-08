@@ -25,7 +25,7 @@ marginAlign uses numpy and pysam. The system python coule be used if these depen
 
     virtualenv --no-site-packages --distribute env && source env/bin/activate && pip install -r requirements.txt
 
-Creation of a virtual environment requires that machine has an existing installation of pip [https://pip.pypa.io/en/latest/index.html] and virtualenv [https://virtualenv.pypa.io/en/latest/index.html].
+Creation of a virtual environment requires that machine has an existing installation of [pip](https://pip.pypa.io/en/latest/index.html) and [virtualenv](https://virtualenv.pypa.io/en/latest/index.html).
 
 ### Testing
 To test the installation run:
@@ -44,7 +44,7 @@ To update a marginAlign installation, from the base directory type:
 
 ### jobTree
 
-Both marginAlign and marginVar are (jobTree)[https://github.com/benedictpaten/jobTree] scripts. This allows you to parallelise the execution of the scripts either using a single multi-processor machine or a cluster. The most important thing to note is that a jobTree script creates a "jobTree", a directory of files that manages the running of the job. As a result both scripts take a --jobTree DIRECTORY argument (by default "jobTree" in the current working directory if not specified). This directory should not exist prior to executing the script. It will be not be deleted after the script has finished (as it can be used to interogate the details of a run), and should be manually deleted.
+Both marginAlign and marginVar are [jobTree](https://github.com/benedictpaten/jobTree) scripts. This allows you to parallelise the execution of the scripts either using a single multi-processor machine or a cluster. The most important thing to note is that a jobTree script creates a "jobTree", a directory of files that manages the running of the job. As a result both scripts take a --jobTree DIRECTORY argument (by default "jobTree" in the current working directory if not specified). This directory should not exist prior to executing the script. It will be not be deleted after the script has finished (as it can be used to interogate the details of a run), and should be manually deleted.
 
 ### Running marginAlign
 
@@ -56,7 +56,7 @@ or just:
 
     marginAlign
 
-This will give you a full list of options. Most are related to the (jobTree)[https://github.com/benedictpaten/jobTree] options, which control how the script is executed. 
+This will give you a full list of options. Most are related to the [jobTree](https://github.com/benedictpaten/jobTree) options, which control how the script is executed. 
 
 To align a FASTQ file ("input.fastq") to a reference fasta file ("reference.fasta") and output the alignment in SAM format with marginAlign ("output.sam") using the "./jobTree" jobTree to manage the batch do:
 
