@@ -11,7 +11,7 @@ def validateSam(samFile):
     # Specify a flag to check if whether samfile had a header
     fileFlag = "None"
     
-    # Check is samfile exists
+    # Check if samfile exists
     if not os.path.isfile(samFile) is True:
         print "No samfile found"
         sys.exit()
