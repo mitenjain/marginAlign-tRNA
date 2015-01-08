@@ -1,5 +1,5 @@
 import unittest
-import os, sys, pysam
+import os, sys, numpy, pysam
 
 """Basic system level tests that the marginAlign and marginVar scripts
 work.
