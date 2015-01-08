@@ -1,5 +1,13 @@
 #!/bin/bash
 
+# Check if virtualenv has been created, and if it exists, activate it
+if [ -d "./env/bin/" ]; then
+	# Control will enter here if $DIRECTORY exists.
+	source env/bin/activate
+	# set a virtenv flag so it can be deactivated once done
+	virtenv=true
+fi
+
 #Get directory containing shell script
 BASEDIR=$(dirname $0)
 
@@ -11,3 +19,9 @@ export PATH=${BASEDIR}/submodules/sonLib/bin:${BASEDIR}/submodules/cactus/bin:${
 
 #Run marginAlign
 python ${BASEDIR}/src/margin/marginAlign.py $@
+
+# Deactivate virtualenv if it was activated
+if [ $virtenv ]; then
+	# deactivate virtualenv
+	deactivate
+fi
