@@ -13,7 +13,7 @@ def validateSam(samFile):
     
     # Check if samfile exists
     if not os.path.isfile(samFile) is True:
-        print "No samfile found"
+        print "No samfile found, terminating test"
         sys.exit()
 
     # Try opening samfile
@@ -64,7 +64,8 @@ class TestCase(unittest.TestCase):
         if os.path.isfile("./tests/output.hmm"):
             print "Output hmm file successful"
         else:
-            print "No output hmm file"
+            print "No output hmm file, terminating test"
+            sys.exit()
 
         # Clean up
         print "Cleaning files"
@@ -77,7 +78,7 @@ class TestCase(unittest.TestCase):
         if os.path.isfile("./tests/input.hmm"):
             print "Input hmm file found"
         else:
-            print "No input hmm file"
+            print "No input hmm file, terminating test"
             sys.exit()
 
         print "Running marginAlign and reading model from input.hmm"
