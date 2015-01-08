@@ -3,9 +3,11 @@ import sys
 from optparse import OptionParser
 from jobTree.src.bioio import getLogLevelString, isNewer, logger, setLoggingFromOptions
 from jobTree.scriptTree.stack import Stack
-from margin.mappers.last import LastChain, LastRealign, LastRealignEm
-from margin.mappers.bwa import BwaChain, BwaRealign, BwaRealignEm
+from margin.mappers.last import LastChain, LastRealign
+from margin.mappers.bwa import BwaChain, BwaRealign
 from margin.utils import pathToBaseNanoporeDir
+import cactus.bar.cactus_expectationMaximisation
+from cactus.bar.cactus_expectationMaximisation import addExpectationMaximisationOptions
     
 def main():
     #Parse the inputs args/options
@@ -13,16 +15,37 @@ def main():
                           version="%prog 0.1")
     
     #Options
-    parser.add_option("--useModel", dest="inputModel", help="Use hmm model instead of stock model", 
-                      default=os.path.join(pathToBaseNanoporeDir(), "margin", "mappers", "last_hmm_20.txt"))
-    parser.add_option("--em", dest="outputModel", 
-                      help="Run expectation maximisation (EM) and output the trained model file in the given file",
-                      default=None)
+    parser.add_option("--em", dest="em", 
+                      help="Run expectation maximisation (EM)",
+                      default=False, action="store_true")
     ##Most people would not want to use the following, but I put them here for debug purposes
     parser.add_option("--bwa", dest="bwa", help="Use BWA instead of LAST", 
                       default=False, action="store_true")
     parser.add_option("--noRealign", dest="noRealign", help="Don't run any realignment step", 
                       default=False, action="store_true")
+    parser.add_option("--gapGamma", dest="gapGamma", help="Set the gap gamma for the AMAP function", 
+                      default=0.5, type=float)
+    parser.add_option("--matchGamma", dest="matchGamma", help="Set the match gamma for the AMAP function", 
+                      default=0.0, type=float)
+    
+    #Add the cactus_expectation maximisation options
+    options = cactus.bar.cactus_expectationMaximisation.Options()
+    options.inputModel = os.path.join(pathToBaseNanoporeDir(), "margin", "mappers", "last_hmm_20.txt")
+    options.modelType="fiveStateAsymmetric" #"threeStateAsymmetric"
+    options.optionsToRealign="--diagonalExpansion=10 --splitMatrixBiggerThanThis=300" 
+    options.randomStart = True
+    options.trials = 3
+    options.outputTrialHmms = True
+    options.iterations = 100
+    options.maxAlignmentLengthPerJob=700000
+    options.maxAlignmentLengthToSample = 50000000
+    #options.outputXMLModelFile = outputModel + ".xml"
+    #options.updateTheBand = True
+    #options.useDefaultModelAsStart = True
+    #options.setJukesCantorStartingEmissions=0.3
+    options.trainEmissions=True
+    #options.tieEmissions = True
+    addExpectationMaximisationOptions(parser, options)
     
     #Add the jobTree options
     Stack.addJobTreeOptions(parser)
@@ -45,15 +68,12 @@ def main():
     #Set the mapper
     if options.noRealign:
         mapper = BwaChain if options.bwa else LastChain
-    elif options.outputModel != None:
-        mapper = BwaRealignEm if options.bwa else LastRealignEm
     else:
         mapper = BwaRealign if options.bwa else LastRealign
     
     #This line invokes jobTree  
     i = Stack(mapper(readFastqFile=args[0], referenceFastaFile=args[1], outputSamFile=args[2], 
-                     inputHmmFile=options.inputModel,
-                     outputHmmFile=options.outputModel)).startJobTree(options) 
+                     options=options)).startJobTree(options) 
         
     #The return value of the jobtree script is the number of failed jobs. If we have any then
     #report this.       

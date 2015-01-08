@@ -33,10 +33,6 @@ class LastChain(Last):
 class LastRealign(Last):
     def run(self):
         Last.run(self)
-        self.realignSamFile(useTrainedModel=True)
+        self.realignSamFile()
 
-class LastRealignEm(Last):
-    def run(self):
-        Last.run(self)
-        self.realignSamFile(doEm=True)
         

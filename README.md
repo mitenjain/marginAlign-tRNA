@@ -58,11 +58,11 @@ After executing the "./jobTree" directory should be deleted.
 
 To enable EM training do, putting the trained model file in "output.hmm" do:
 
-    marginAlign input.fastq reference.fasta output.sam --em output.hmm --jobTree ./jobTree
+    marginAlign input.fastq reference.fasta output.sam --em --outputModel output.hmm --jobTree ./jobTree
 
-To use a pretrained model "input.hmm" do:
+To use a different model to the default one do:
 
-    marginAlign input.fastq reference.fasta output.sam --useModel input.hmm --jobTree ./jobTree
+    marginAlign input.fastq reference.fasta output.sam --inputModel input.hmm --jobTree ./jobTree
 
 ### Running marginVar
 

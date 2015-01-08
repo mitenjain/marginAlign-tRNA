@@ -17,9 +17,5 @@ class BwaChain(Bwa):
 class BwaRealign(Bwa):
     def run(self):
         Bwa.run(self)
-        self.realignSamFile(useTrainedModel=True)
+        self.realignSamFile()
 
-class BwaRealignEm(Bwa):
-    def run(self):
-        Bwa.run(self)
-        self.realignSamFile(doEm=True)

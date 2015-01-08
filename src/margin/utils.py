@@ -5,6 +5,8 @@ from cactus.bar.cactus_expectationMaximisation import Hmm, SYMBOL_NUMBER
 import numpy as np
 
 def pathToBaseNanoporeDir():
+    """Returns path to base directory "marginAlign"
+    """
     import marginAlign
     i = absSymPath(__file__)
     return os.path.split(os.path.split(i)[0])[0]
@@ -184,7 +186,8 @@ def samIterator(sam):
             yield aR
 
 def mergeChainedAlignedReads(chainedAlignedReads, refSequence, readSequence):
-    """Makes a global aligment for the given chained reads.
+    """Makes a global alignment for the given chained reads.
+    
     From doc on building pysam line
     a = pysam.AlignedRead()
     a.qname = "read_28833_29006_6945"
@@ -359,7 +362,7 @@ def chainSamFile(samFile, outputSamFile, readFastqFile, referenceFastaFile, chai
     sam.close()
     outputSam.close()
     
-def learnModelFromSamFileTargetFn(target, samFile, readFastqFile, referenceFastaFile, outputModel):
+def learnModelFromSamFileTargetFn(target, samFile, readFastqFile, referenceFastaFile, options):
     """Does expectation maximisation on sam file to learn the hmm for the sam file.
     """
     #Convert the read file to fasta
@@ -396,40 +399,43 @@ def learnModelFromSamFileTargetFn(target, samFile, readFastqFile, referenceFasta
         #fH.write(getGlobalAlignmentExonerateCigarFormatString(aR, sam, refSequences[sam.getrname(aR.rname)], readSequences[aR.qname]) + "\n")
     fH.close()
     
-    #Run cactus_expectationMaximisation
-    options = cactus_expectationMaximisation.Options()
-    options.modelType="fiveStateAsymmetric" #"threeStateAsymmetric"
-    options.optionsToRealign="--diagonalExpansion=10 --splitMatrixBiggerThanThis=300" 
-    options.randomStart = True
-    options.trials = 3
-    options.outputTrialHmms = True
-    options.iterations = 100
-    options.maxAlignmentLengthPerJob=700000
-    options.maxAlignmentLengthToSample = 50000000
-    options.outputXMLModelFile = outputModel + ".xml"
-    #options.updateTheBand = True
-    #options.useDefaultModelAsStart = True
-    #options.setJukesCantorStartingEmissions=0.3
-    options.trainEmissions=True
-    #options.tieEmissions = True
-    
-    unnormalisedOutputModel = outputModel + "_unnormalised"
-    #Do training if necessary
-    if not os.path.exists(unnormalisedOutputModel):
-        target.addChildTargetFn(cactus_expectationMaximisation.expectationMaximisationTrials, args=(" ".join([reads, referenceFastaFile ]), cigars, unnormalisedOutputModel, options))
+    unnormalisedOutputModel = os.path.join(target.getGlobalTempDir(), "unnormalisedOutputModel.hmm")
+    target.addChildTargetFn(cactus_expectationMaximisation.expectationMaximisationTrials, args=(" ".join([reads, referenceFastaFile ]), cigars, unnormalisedOutputModel, options))
     
     #Now set up normalisation
-    target.setFollowOnTargetFn(learnModelFromSamFileTargetFn2, args=(unnormalisedOutputModel, outputModel))
+    target.setFollowOnTargetFn(learnModelFromSamFileTargetFn2, args=(unnormalisedOutputModel, options))
 
-def learnModelFromSamFileTargetFn2(target, unnormalisedOutputModel, outputModel):
+def learnModelFromSamFileTargetFn2(target, unnormalisedOutputModel, options):
     hmm = Hmm.loadHmm(unnormalisedOutputModel)
     setHmmIndelEmissionsToBeFlat(hmm)
     #Normalise background emission frequencies, if requested to GC% given
     normaliseHmmByReferenceGCContent(hmm, 0.5)
-    hmm.write(outputModel)
+    hmm.write(options.outputModel)
+    
+toMatrix = lambda e : map(lambda i : e[SYMBOL_NUMBER*i:SYMBOL_NUMBER*(i+1)], xrange(SYMBOL_NUMBER))
+fromMatrix = lambda e : reduce(lambda x, y : list(x) + list(y), e)
+    
+def normaliseHmmByReferenceGCContent(hmm, gcContent):
+    """Normalise background emission frequencies to GC% given
+    """
+    for state in range(hmm.stateNumber):
+        if state not in (2, 4): #Don't normalise GC content of insert states (as they don't have any ref bases!)
+            n = toMatrix(hmm.emissions[(SYMBOL_NUMBER**2) * state:(SYMBOL_NUMBER**2) * (state+1)])
+            hmm.emissions[(SYMBOL_NUMBER**2) * state:(SYMBOL_NUMBER**2) * (state+1)] = fromMatrix(map(lambda i : map(lambda j : (n[i][j]/sum(n[i])) * (gcContent/2.0 if i in [1, 2] else (1.0-gcContent)/2.0), range(SYMBOL_NUMBER)), range(SYMBOL_NUMBER))) #Normalise
+
+def setHmmIndelEmissionsToBeFlat(hmm):
+    """Set indel emissions to all be flat
+    """
+    for state in range(1, hmm.stateNumber):
+        hmm.emissions[(SYMBOL_NUMBER**2) * state:(SYMBOL_NUMBER**2) * (state+1)] = [1.0/(SYMBOL_NUMBER**2)]*SYMBOL_NUMBER**2  
+
+def modifyHmmEmissionsByExpectedVariationRate(hmm, substitutionRate):
+    #Normalise background emission frequencies, if requested to GC% given
+    n = toMatrix(map(lambda i : (1.0-substitutionRate) if i % SYMBOL_NUMBER == i / SYMBOL_NUMBER else substitutionRate/(SYMBOL_NUMBER-1), xrange(SYMBOL_NUMBER**2)))
+    hmm.emissions[:SYMBOL_NUMBER**2] = fromMatrix(np.dot(toMatrix(hmm.emissions[:SYMBOL_NUMBER**2]), n))
 
 def realignSamFileTargetFn(target, samFile, outputSamFile, readFastqFile, 
-                           referenceFastaFile, gapGamma, matchGamma, hmmFile=None, trainHmmFile=False, chainFn=chainFn):
+                           referenceFastaFile, options, chainFn=chainFn):
     """Chains and then realigns the resulting global alignments, using jobTree to do it in parallel on a cluster.
     Optionally runs expectation maximisation.
     """
@@ -438,46 +444,74 @@ def realignSamFileTargetFn(target, samFile, outputSamFile, readFastqFile,
     chainSamFile(samFile, tempSamFile, readFastqFile, referenceFastaFile, chainFn)
     
     #If we do expectation maximisation we split here:
-    if hmmFile != None and trainHmmFile:
-        target.addChildTargetFn(learnModelFromSamFileTargetFn, args=(tempSamFile, readFastqFile, referenceFastaFile, hmmFile))
-    else:
-        assert not trainHmmFile
-    
-    target.setFollowOnTargetFn(realignSamFile2TargetFn, args=(tempSamFile, outputSamFile, readFastqFile, referenceFastaFile, hmmFile, gapGamma, matchGamma))
+    if options.em:
+        target.addChildTargetFn(learnModelFromSamFileTargetFn, args=(tempSamFile, readFastqFile, referenceFastaFile, options))
 
-def realignSamFile2TargetFn(target, samFile, outputSamFile, readFastqFile, referenceFastaFile, hmmFile, gapGamma, matchGamma):
+    target.setFollowOnTargetFn(realignSamFile2TargetFn, args=(tempSamFile, outputSamFile, readFastqFile, referenceFastaFile, options))
+
+def realignSamFile2TargetFn(target, samFile, outputSamFile, readFastqFile, referenceFastaFile, options):
     #Load reference sequences
     refSequences = getFastaDictionary(referenceFastaFile) #Hash of names to sequences
     readSequences = getFastqDictionary(readFastqFile) #Hash of names to sequences
     
-    #Read through the SAM file
-    sam = pysam.Samfile(samFile, "r" )
     tempCigarFiles = []
+    childCount, totalSeqLength = 0, sys.maxint
+    tempExonerateFile, tempQueryFile = None, None 
+    tempExonerateFileHandle, tempQueryFileHandle = None, None
+    refName = None
+    
+    #Read through the SAM file
+    sam = pysam.Samfile(samFile, "r" )  
+    
+    def makeChild():
+        #Add a child target to do the realignment of some of the lines.
+        if tempExonerateFile != None:
+            tempExonerateFileHandle.close()
+            tempQueryFileHandle.close()
+            #Temporary cigar file to store the realignment
+            tempCigarFiles.append(os.path.join(target.getGlobalTempDir(), "rescoredCigar_%i.cig" % childCount))
+            target.addChildTargetFn(realignCigarTargetFn, args=(tempExonerateFile, sam.getrname(aR.rname), 
+                                                                refSequences[sam.getrname(aR.rname)], 
+                                                                tempQueryFile, tempCigarFiles[-1], options,
+                                                                options.outputModel if options.em else options.inputModel))
+    
     for aR, index in zip(samIterator(sam), xrange(sys.maxint)): #Iterate on the sam lines realigning them in parallel
-        #Temporary cigar file
-        tempCigarFiles.append(os.path.join(target.getGlobalTempDir(), "rescoredCigar_%i.cig" % index))
+        if totalSeqLength > options.maxAlignmentLengthPerJob or refName != sam.getrname(aR.rname):
+            makeChild()
+            tempExonerateFile = os.path.join(target.getGlobalTempDir(), "tempExonerateCigar_%s.cig" % childCount)
+            tempExonerateFileHandle = open(tempExonerateFile, 'w')
+            tempQueryFile = os.path.join(target.getGlobalTempDir(), "tempQueryCigar_%s.cig" % childCount)
+            tempQueryFileHandle = open(tempQueryFile, 'w')
+            childCount += 1
+            totalSeqLength = 0
         
-        #Add a child target to do the alignment
-        target.addChildTargetFn(realignCigarTargetFn, args=(getExonerateCigarFormatString(aR, sam), sam.getrname(aR.rname), refSequences[sam.getrname(aR.rname)], aR.qname, aR.query, tempCigarFiles[-1], hmmFile, gapGamma, matchGamma))
+        tempExonerateFileHandle.write(getExonerateCigarFormatString(aR, sam) + "\n")
+        fastaWrite(tempQueryFileHandle, aR.qname, aR.query)
+        totalSeqLength += len(aR.query)
+        refName = sam.getrname(aR.rname)
+            
+    makeChild()
     
     target.setFollowOnTargetFn(realignSamFile3TargetFn, args=(samFile, outputSamFile, tempCigarFiles))
     #Finish up
     sam.close()
     
-def realignCigarTargetFn(target, exonerateCigarString, referenceSequenceName, referenceSequence, querySequenceName, querySequence, outputCigarFile, hmmFile, gapGamma, matchGamma):
+def realignCigarTargetFn(target, exonerateCigarStringFile, referenceSequenceName, 
+                         referenceSequence, querySequenceFile, outputCigarFile, options, hmmFile):
     #Temporary files
-    tempRefFile = os.path.join(target.getGlobalTempDir(), "ref.fa")
-    tempReadFile = os.path.join(target.getGlobalTempDir(), "read.fa")
+    tempRefFile = os.path.join(target.getLocalTempDir(), "ref.fa")
+    tempReadFile = os.path.join(target.getLocalTempDir(), "read.fa")
     
-    #Write the temporary files.
+    #Write the temporary reference file.
     fastaWrite(tempRefFile, referenceSequenceName, referenceSequence) 
-    fastaWrite(tempReadFile, querySequenceName, querySequence)
-
-    #Call to cactus_realign
-    loadHmm = nameValue("loadHmm", hmmFile)
-    system("echo %s | cactus_realign %s %s --diagonalExpansion=10 --splitMatrixBiggerThanThis=3000 %s --gapGamma=%s --matchGamma=%s > %s" % (exonerateCigarString, tempRefFile, tempReadFile, loadHmm, gapGamma, matchGamma, outputCigarFile))
-    assert len([ pA for pA in cigarRead(open(outputCigarFile)) ]) > 0
-    assert len([ pA for pA in cigarRead(open(outputCigarFile)) ]) == 1
+    
+    #For each cigar string
+    for exonerateCigarString, (querySequenceName, querySequence) in zip(open(exonerateCigarStringFile, "r"), fastaRead(querySequenceFile)):
+        fastaWrite(tempReadFile, querySequenceName, querySequence)
+        #Call to cactus_realign
+        loadHmm = nameValue("loadHmm", hmmFile)
+        system("echo %s | cactus_realign %s %s --diagonalExpansion=10 --splitMatrixBiggerThanThis=3000 %s --gapGamma=%s --matchGamma=%s >> %s" % \
+               (exonerateCigarString[:-1], tempRefFile, tempReadFile, loadHmm, options.gapGamma, options.matchGamma, outputCigarFile))
 
 def realignSamFile3TargetFn(target, samFile, outputSamFile, tempCigarFiles):
     #Setup input and output sam files
@@ -485,9 +519,13 @@ def realignSamFile3TargetFn(target, samFile, outputSamFile, tempCigarFiles):
     
     #Replace the cigar lines with the realigned cigar lines
     outputSam = pysam.Samfile(outputSamFile, "wh", template=sam)
-    for aR, tempCigarFile in zip(samIterator(sam), tempCigarFiles): #Iterate on the sam lines realigning them in parallel
-        #Load the cigar
-        pA = [ i for i in cigarRead(open(tempCigarFile)) ][0]
+    def cigarIterator():
+        #Iterates over all the cigars in the temp files.
+        for tempCigarFile in tempCigarFiles:
+            for pA in cigarRead(open(tempCigarFile)):
+                yield pA 
+        yield None #This is put in to cause an error if there is fewer cigars than pairwise alignments
+    for aR, pA in zip(samIterator(sam), cigarIterator()): #Iterate on the sam lines realigning them in parallel
         
         #Convert to sam line
         aR.cigar = tuple([ (op.type, op.length) for op in pA.operationList ])
@@ -498,24 +536,3 @@ def realignSamFile3TargetFn(target, samFile, outputSamFile, tempCigarFiles):
     #Finish up
     sam.close()
     outputSam.close()
-    
-toMatrix = lambda e : map(lambda i : e[SYMBOL_NUMBER*i:SYMBOL_NUMBER*(i+1)], xrange(SYMBOL_NUMBER))
-fromMatrix = lambda e : reduce(lambda x, y : list(x) + list(y), e)
-    
-def normaliseHmmByReferenceGCContent(hmm, gcContent):
-    #Normalise background emission frequencies, if requested to GC% given
-    for state in range(hmm.stateNumber):
-        if state not in (2, 4): #Don't normalise GC content of insert states (as they don't have any ref bases!)
-            n = toMatrix(hmm.emissions[(SYMBOL_NUMBER**2) * state:(SYMBOL_NUMBER**2) * (state+1)])
-            hmm.emissions[(SYMBOL_NUMBER**2) * state:(SYMBOL_NUMBER**2) * (state+1)] = fromMatrix(map(lambda i : map(lambda j : (n[i][j]/sum(n[i])) * (gcContent/2.0 if i in [1, 2] else (1.0-gcContent)/2.0), range(SYMBOL_NUMBER)), range(SYMBOL_NUMBER))) #Normalise
-
-def modifyHmmEmissionsByExpectedVariationRate(hmm, substitutionRate):
-    #Normalise background emission frequencies, if requested to GC% given
-    n = toMatrix(map(lambda i : (1.0-substitutionRate) if i % SYMBOL_NUMBER == i / SYMBOL_NUMBER else substitutionRate/(SYMBOL_NUMBER-1), xrange(SYMBOL_NUMBER**2)))
-    hmm.emissions[:SYMBOL_NUMBER**2] = fromMatrix(np.dot(toMatrix(hmm.emissions[:SYMBOL_NUMBER**2]), n))
-
-def setHmmIndelEmissionsToBeFlat(hmm):
-    #Set indel emissions to all be flat
-    for state in range(1, hmm.stateNumber):
-        hmm.emissions[(SYMBOL_NUMBER**2) * state:(SYMBOL_NUMBER**2) * (state+1)] = [1.0/(SYMBOL_NUMBER**2)]*SYMBOL_NUMBER**2
-    
