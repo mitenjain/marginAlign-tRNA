@@ -19,6 +19,13 @@ This will build the code. Two executables: "marginAlign" and "marginVar" are in 
 of the package. Place these binaries on your path if you wish to use them without referring to their absolute
 path on the filesystem.
 
+### Creating a virtual environment to handle dependencies
+marginAlign uses numpy and pysam. The system python coule be used if have these dependencies are present. Otherwise, a virtual environment can be created by running:
+
+    virtualenv --no-site-packages --distribute env && source env/bin/activate && pip install -r requirements.txt
+
+Creation of a virtual environment requires that machine has an existing installation of pip [https://pip.pypa.io/en/latest/index.html] and virtualenv [https://virtualenv.pypa.io/en/latest/index.html].
+
 ### Testing
 To test the installation run:
 
