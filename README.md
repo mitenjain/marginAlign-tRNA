@@ -5,12 +5,13 @@ The package comes with two programs: marginAlign, a short read aligner, and marg
 ### Requirements
 * git
 * python 2.7
+* pip/virtualenv (see below)
 
 ### Installation
 To install the code run:
 
-    git clone git://github.com/mitenjain/nanopore.git
-    cd nanopore
+    git clone git://github.com/benedictpaten/margin.git
+    cd margin
     git pull
     git submodule update --init
     make
@@ -19,8 +20,8 @@ This will build the code. Two executables: "marginAlign" and "marginVar" are in 
 of the package. Place these binaries on your path if you wish to use them without referring to their absolute
 path on the filesystem.
 
-### Creating a virtual environment to handle dependencies
-marginAlign uses numpy and pysam. The system python coule be used if have these dependencies are present. Otherwise, a virtual environment can be created by running:
+### Creating a virtual environment to handle python dependencies
+marginAlign uses numpy and pysam. The system python coule be used if these dependencies are present. Otherwise, a virtual environment can be created by running the following command in the margin base directory:
 
     virtualenv --no-site-packages --distribute env && source env/bin/activate && pip install -r requirements.txt
 
