@@ -5,26 +5,6 @@ import os, sys, numpy, pysam
 work.
 """
 
-def validateSam(samFile):
-    """Checks if a sam file is valid
-    """
-    # Specify a flag to check if whether samfile had a header
-    fileFlag = "None"
-    # Check if samfile exists
-    self.assertTrue(os.path.isfile(samFile))
-    # Try opening samfile
-    samfile = pysam.Samfile(samFile, "r" )
-    # Check if samfile contains a proper header, and set fileFlag accordingly
-    if samfile.header:
-        if "HD" and "SQ" in samfile.header:
-            fileFlag = "success"
-    samfile.close()
-    if fileFlag != "None":
-        print "Samfile validation successful"
-    else:
-        print "Samfile validation failed"
-
-
 class TestCase(unittest.TestCase):
 
     def setUp(self):
@@ -33,11 +13,30 @@ class TestCase(unittest.TestCase):
     def tearDown(self):
         unittest.TestCase.tearDown(self)
 
+    def validateSam(self, samFile):
+        """Checks if a sam file is valid
+        """
+        # Specify a flag to check if whether samfile had a header
+        fileFlag = "None"
+        # Check if samfile exists
+        self.assertTrue(os.path.isfile(samFile))
+        # Try opening samfile
+        samfile = pysam.Samfile(samFile, "r" )
+        # Check if samfile contains a proper header, and set fileFlag accordingly
+        if samfile.header:
+            if "HD" and "SQ" in samfile.header:
+                fileFlag = "success"
+        samfile.close()
+        if fileFlag != "None":
+            print "Samfile validation successful"
+        else:
+            print "Samfile validation failed"
+
     def testMarginAlignNoEm(self):
         print "Running marginAlign"
         os.system("./marginAlign tests/reads.fq tests/reference.fa tests/test.sam --jobTree testJobTree")
         # Validate samfile
-        validateSam("./tests/test.sam")
+        self.validateSam("./tests/test.sam")
         # Clean up
         print "Cleaning files"
         os.system("rm -rf tests/test.sam testJobTree")
