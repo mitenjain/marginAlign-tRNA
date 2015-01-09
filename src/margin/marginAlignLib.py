@@ -112,7 +112,7 @@ def chainFn(alignedReads, refSeq, readSeq, scoreFn=\
         """Gets the start and end coordinates in both the reference and query
         """
         alignedPairs = list(AlignedPair.iterator(alignedRead, refSeq, readSeq))
-        return alignedPairs[0].refPos, alignedPairs[0].getSignedReadPos(), 
+        return alignedPairs[0].refPos, alignedPairs[0].getSignedReadPos(), \
     alignedPairs[-1].refPos, alignedPairs[-1].getSignedReadPos()
     alignedReadToScores = dict([ (aR, scoreFn(aR, refSeq, readSeq)) for aR in alignedReads])
     alignedReadToCoordinates = dict([ (aR, getStartAndEndCoordinates(aR)) for \
@@ -286,68 +286,20 @@ def realignSamFileTargetFn(target, samFile, outputSamFile, readFastqFile,
         target.addChildTargetFn(learnModelFromSamFileTargetFn, args=(tempSamFile, 
                                     readFastqFile, referenceFastaFile, options))
 
-    target.setFollowOnTargetFn(realignSamFile2TargetFn, args=(tempSamFile, outputSamFile, 
-                                             readFastqFile, referenceFastaFile, options))
-
-def realignSamFile2TargetFn(target, samFile, outputSamFile, readFastqFile, 
-                            referenceFastaFile, options):
-    #Load reference sequences
-    refSequences = getFastaDictionary(referenceFastaFile) #Hash of names to sequences
-    readSequences = getFastqDictionary(readFastqFile) #Hash of names to sequences
+    #target.setFollowOnTargetFn(realignSamFile2TargetFn, args=(tempSamFile, outputSamFile, 
+    #                                         readFastqFile, referenceFastaFile, options))
+    options.hmmFile = options.inputModel if options.em else options.outputModel #This
+    #setups the hmm to be used the realignment function
     
-    tempCigarFiles = []
-    childCount, totalSeqLength = 0, sys.maxint
-    tempExonerateFile, tempQueryFile = None, None 
-    tempExonerateFileHandle, tempQueryFileHandle = None, None
-    refName = None
-    
-    #Read through the SAM file
-    sam = pysam.Samfile(samFile, "r" )  
-    
-    def makeChild():
-        #Add a child target to do the realignment of some of the lines.
-        if tempExonerateFile != None:
-            tempExonerateFileHandle.close()
-            tempQueryFileHandle.close()
-            #Temporary cigar file to store the realignment
-            tempCigarFiles.append(os.path.join(target.getGlobalTempDir(), 
-                                               "rescoredCigar_%i.cig" % childCount))
-            target.addChildTargetFn(realignCigarTargetFn, 
-                                    args=(tempExonerateFile, sam.getrname(aR.rname), 
-                                          refSequences[sam.getrname(aR.rname)], 
-                                          tempQueryFile, tempCigarFiles[-1], options,
-                                          options.outputModel if 
-                                          options.em else options.inputModel))
-    
-    for aR, index in zip(samIterator(sam), xrange(sys.maxint)): 
-        #Iterate on the sam lines realigning them in parallel
-        if totalSeqLength > options.maxAlignmentLengthPerJob or \
-        refName != sam.getrname(aR.rname):
-            makeChild()
-            tempExonerateFile = os.path.join(target.getGlobalTempDir(), 
-                                             "tempExonerateCigar_%s.cig" % childCount)
-            tempExonerateFileHandle = open(tempExonerateFile, 'w')
-            tempQueryFile = os.path.join(target.getGlobalTempDir(), 
-                                         "tempQueryCigar_%s.cig" % childCount)
-            tempQueryFileHandle = open(tempQueryFile, 'w')
-            childCount += 1
-            totalSeqLength = 0
-        
-        tempExonerateFileHandle.write(getExonerateCigarFormatString(aR, sam) + "\n")
-        fastaWrite(tempQueryFileHandle, aR.qname, aR.query)
-        totalSeqLength += len(aR.query)
-        refName = sam.getrname(aR.rname)
-            
-    makeChild()
-    
-    target.setFollowOnTargetFn(realignSamFile3TargetFn, args=(samFile, outputSamFile, 
-                                                              tempCigarFiles))
-    #Finish up
-    sam.close()
+    target.setFollowOnTargetFn(paralleliseSamProcessingTargetFn, 
+                               args=(tempSamFile, 
+                                     referenceFastaFile, outputSamFile, 
+                                     realignCigarTargetFn, realignSamFile3TargetFn,
+                                     options))
     
 def realignCigarTargetFn(target, exonerateCigarStringFile, referenceSequenceName, 
                          referenceSequence, querySequenceFile, 
-                         outputCigarFile, options, hmmFile):
+                         outputCigarFile, options):
     #Temporary files
     tempRefFile = os.path.join(target.getLocalTempDir(), "ref.fa")
     tempReadFile = os.path.join(target.getLocalTempDir(), "read.fa")
@@ -360,13 +312,14 @@ def realignCigarTargetFn(target, exonerateCigarStringFile, referenceSequenceName
     zip(open(exonerateCigarStringFile, "r"), fastaRead(querySequenceFile)):
         fastaWrite(tempReadFile, querySequenceName, querySequence)
         #Call to cactus_realign
-        loadHmm = nameValue("loadHmm", hmmFile)
+        loadHmm = nameValue("loadHmm", options.hmmFile)
         system("echo %s | cactus_realign %s %s --diagonalExpansion=10 \
         --splitMatrixBiggerThanThis=3000 %s --gapGamma=%s --matchGamma=%s >> %s" % \
                (exonerateCigarString[:-1], tempRefFile, tempReadFile, loadHmm, 
                 options.gapGamma, options.matchGamma, outputCigarFile))
 
-def realignSamFile3TargetFn(target, samFile, outputSamFile, tempCigarFiles):
+def realignSamFile3TargetFn(target, samFile, referenceFastaFile, 
+                            outputSamFile, tempCigarFiles, options):
     #Setup input and output sam files
     sam = pysam.Samfile(samFile, "r" )
     

@@ -1,7 +1,7 @@
 import os
 import sys
 from optparse import OptionParser
-from jobTree.src.bioio import getLogLevelString, isNewer, logger, setLoggingFromOptions
+from jobTree.src.bioio import logger, setLoggingFromOptions
 from jobTree.scriptTree.stack import Stack
 from margin.mappers.last import LastChain, LastRealign
 from margin.mappers.bwa import BwaChain, BwaRealign

@@ -219,3 +219,59 @@ def combineSamFiles(baseSamFile, extraSamFiles, outputSamFile):
             outputSam.write(line)
         sam.close()
     outputSam.close()
+    
+def paralleliseSamProcessingTargetFn(target, samFile, 
+                            referenceFastaFile, outputFile, 
+                            childTargetFn, followOnTargetFn, options):
+    """Parallelise a computation over the alignments in a SAM file.
+    """
+    #Load reference sequences
+    refSequences = getFastaDictionary(referenceFastaFile) #Hash of names to sequences
+    
+    tempOutputFiles = []
+    childCount, totalSeqLength = 0, sys.maxint
+    tempExonerateFile, tempQueryFile = None, None 
+    tempExonerateFileHandle, tempQueryFileHandle = None, None
+    refName = None
+    
+    #Read through the SAM file
+    sam = pysam.Samfile(samFile, "r" )  
+    
+    def makeChild():
+        #Add a child target to do the processing of a subset of the lines.
+        if tempExonerateFile != None:
+            tempExonerateFileHandle.close()
+            tempQueryFileHandle.close()
+            #Temporary cigar file to store the realignment
+            tempOutputFiles.append(os.path.join(target.getGlobalTempDir(), 
+                                               "tempOutput_%i.txt" % childCount))
+            target.addChildTargetFn(childTargetFn,
+                                    args=(tempExonerateFile, sam.getrname(aR.rname), 
+                                          refSequences[sam.getrname(aR.rname)], 
+                                          tempQueryFile, tempOutputFiles[-1], options))
+    
+    for aR, index in zip(samIterator(sam), xrange(sys.maxint)): 
+        #Iterate on the sam lines realigning them in parallel
+        if totalSeqLength > options.maxAlignmentLengthPerJob or \
+        refName != sam.getrname(aR.rname):
+            makeChild()
+            tempExonerateFile = os.path.join(target.getGlobalTempDir(), 
+                                             "tempExonerateCigar_%s.cig" % childCount)
+            tempExonerateFileHandle = open(tempExonerateFile, 'w')
+            tempQueryFile = os.path.join(target.getGlobalTempDir(), 
+                                         "tempQueryCigar_%s.cig" % childCount)
+            tempQueryFileHandle = open(tempQueryFile, 'w')
+            childCount += 1
+            totalSeqLength = 0
+        
+        tempExonerateFileHandle.write(getExonerateCigarFormatString(aR, sam) + "\n")
+        fastaWrite(tempQueryFileHandle, aR.qname, aR.query)
+        totalSeqLength += len(aR.query)
+        refName = sam.getrname(aR.rname)
+            
+    makeChild()
+    
+    target.setFollowOnTargetFn(followOnTargetFn, args=(samFile, referenceFastaFile, \
+                                                       outputFile, tempOutputFiles, options))
+    #Finish up
+    sam.close()
