@@ -1,6 +1,6 @@
 The marginAlign package can be used to align reads to a reference genome and call single nucleotide variations (SNVs). It is specifically tailored for Oxford Nanopore Reads.
 
-The package comes with two programs: marginAlign, a short read aligner, and marginVar, a program to call single nucleotide variations.
+The package comes with two programs: marginAlign, a short read aligner, and marginCaller, a program to call single nucleotide variations.
 
 ### Requirements
 * git
@@ -72,14 +72,14 @@ To use a different model to the default one do:
 
     marginAlign input.fastq reference.fasta output.sam --inputModel input.hmm --jobTree ./jobTree
 
-### Running marginVar
+### Running marginCaller
 
 To call single nucleotide variations from an existing alignment ("input.sam") sam file and the output ("output.vcf"):
 
-    marginVar input.sam output.vcf --jobTree ./jobTree
+    marginCaller input.sam output.vcf --jobTree ./jobTree
 
 To NOT marginalise over the read alignments do:
 
-    marginVar input.sam output.vcf --noMargin --jobTree ./jobTree
+    marginCaller input.sam output.vcf --noMargin --jobTree ./jobTree
 
-### Citing marginAlign/marginVar
+### Citing marginAlign/marginCaller

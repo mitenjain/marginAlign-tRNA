@@ -1,5 +1,5 @@
 from jobTree.scriptTree.target import Target
-from margin.utils import chainSamFile, realignSamFileTargetFn
+from margin.marginAlignLib import chainSamFile, realignSamFileTargetFn
 import os
 from sonLib.bioio import system
 from margin.utils import AlignedPair, getFastaDictionary, getFastqDictionary, getExonerateCigarFormatString, samIterator
