@@ -5,6 +5,7 @@ from jobTree.src.bioio import logger, setLoggingFromOptions
 from jobTree.scriptTree.stack import Stack
 from jobTree.scriptTree.target import Target
 from margin.utils import pathToBaseNanoporeDir
+from margin.marginCallerLib import marginCallerTargetFn
     
 def main():
     #Parse the inputs args/options
@@ -15,12 +16,18 @@ def main():
     parser.add_option("--noMargin", dest="noMargin", help="Do not marginalise over the read \
     alignments, rather use the input alignment to call the variants (this will be much faster)", 
                       default=False, action="store_true")
-    parser.add_option("--inputModel", default=os.path.join(pathToBaseNanoporeDir(), 
+    parser.add_option("--alignmentModel", default=os.path.join(pathToBaseNanoporeDir(), 
                                                           "margin", "mappers", "last_hmm_20.txt"), 
-                     help="The input model to use")
+                     help="The model to use in realigning the reads to the reference.")
+    parser.add_option("--errorModel", default=os.path.join(pathToBaseNanoporeDir(), 
+                                                          "margin", "mappers", "last_hmm_20.txt"), 
+                     help="The model to use in calculating the difference between the predicted true reference and the reads.")
     parser.add_option("--maxAlignmentLengthPerJob", default=7000000, 
                      help="Maximum total alignment length of alignments to include in one posterior prob calculation job.", 
                      type=int)
+    parser.add_option("--posteriorProbabilityThreshold", default=0.3, 
+                     help="The posterior threshold for a non-reference base above which to report a variant.", 
+                     type=float)
     
     #Add the jobTree options
     Stack.addJobTreeOptions(parser)
@@ -40,12 +47,8 @@ def main():
     if len(args) != 3:
         raise RuntimeError("Expected three arguments, got: %s" % " ".join(args))
     
-    
-    marginCallTargetFn(target, samFile, outputVcfFile, 
-                           referenceFastaFile, options)
-    
     #This line invokes jobTree  
-    i = Stack(Target.makeTargetFn(target=marginCallTargetFn, args=(args[0], args[1], args[2], options))).startJobTree(options) 
+    i = Stack(Target.makeTargetFn(fn=marginCallerTargetFn, args=(args[0], args[1], args[2], options))).startJobTree(options) 
         
     #The return value of the jobtree script is the number of failed jobs. If we have any then
     #report this.       

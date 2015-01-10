@@ -78,7 +78,7 @@ To call single nucleotide variations from an existing alignment ("input.sam") sa
 
     marginCaller input.sam output.vcf --jobTree ./jobTree
 
-To NOT marginalise over the read alignments do:
+To NOT marginalise over the read alignments do (this will just use the existing alignment, and will be much quicker):
 
     marginCaller input.sam output.vcf --noMargin --jobTree ./jobTree
 
