@@ -25,8 +25,8 @@ def main():
     parser.add_option("--maxAlignmentLengthPerJob", default=7000000, 
                      help="Maximum total alignment length of alignments to include in one posterior prob calculation job.", 
                      type=int)
-    parser.add_option("--posteriorProbabilityThreshold", default=0.3, 
-                     help="The posterior threshold for a non-reference base above which to report a variant.", 
+    parser.add_option("--threshold", default=0.3, 
+                     help="The posterior probability threshold for a non-reference base above which to report a variant.", 
                      type=float)
     
     #Add the jobTree options
@@ -46,6 +46,9 @@ def main():
     #Exit if the arguments are not what we expect
     if len(args) != 3:
         raise RuntimeError("Expected three arguments, got: %s" % " ".join(args))
+    
+    print options.errorModel
+    print options.threshold
     
     #This line invokes jobTree  
     i = Stack(Target.makeTargetFn(fn=marginCallerTargetFn, args=(args[0], args[1], args[2], options))).startJobTree(options) 

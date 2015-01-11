@@ -2,6 +2,9 @@ import pysam, sys, os, collections
 from jobTree.src.bioio import fastaRead, system, fastaWrite, logger
 import numpy as np
 from margin.utils import *
+import math
+from cactus.bar.cactus_expectationMaximisation import Hmm
+from itertools import product
 try:
     import cPickle 
 except ImportError:
@@ -71,25 +74,25 @@ def calcBasePosteriorProbs(baseObservations, refBase,
     """Function that does the column probability calculation.
     """
     logBaseProbs = map(lambda missingBase : \
-            math.log(getProb(evolutionarySubstitionMatrix, refBase, missingBase)) + 
+            math.log(getProb(evolutionarySubstitionMatrix, refBase.upper(), missingBase)) + 
             reduce(lambda x, y : x + y, map(lambda observedBase : \
                         math.log(getProb(errorSubstutionMatrix, missingBase, 
-                                         observedBase))*baseObservations[observedBase], bases)), bases)
+                                         observedBase))*baseObservations[observedBase], BASES)), BASES)
     totalLogProb = reduce(lambda x, y : x + math.log(1 + math.exp(y-x)), logBaseProbs)
-    return dict(zip(bases, map(lambda logProb : math.exp(logProb - totalLogProb), logBaseProbs)))
+    return dict(zip(BASES, map(lambda logProb : math.exp(logProb - totalLogProb), logBaseProbs)))
 
 def loadHmmSubstitutionMatrix(hmmFile):
     """Load the substitution matrix from an HMM file
     """
     hmm = Hmm.loadHmm(hmmFile)
-    m = hmm.emissions[:len(bases)**2]
+    m = hmm.emissions[:len(BASES)**2]
     m = map(lambda i : m[i] / sum(m[4*(i/4):4*(1 + i/4)]), range(len(m))) #Normalise m
-    return dict(zip(product(bases, bases), m))
+    return dict(zip(product(BASES, BASES), m))
 
 def getNullSubstitutionMatrix():
     """Null matrix that does nothing
     """
-    return dict(zip(product(bases, bases), [1.0]*len(bases)**2))
+    return dict(zip(product(BASES, BASES), [1.0]*len(BASES)**2))
 
 def variantCallSamFileTargetFn(target, samFile, referenceFastaFile, 
                             outputVcfFile, tempPosteriorProbFiles, options):
@@ -123,7 +126,7 @@ def variantCallSamFileTargetFn(target, samFile, referenceFastaFile,
     
     #Now do the SNV calculations
     for refSeqName, refPosition in expectationsOfBasesAtEachPosition:
-        refBase = referenceSequences[refSeqName][refPosition] #The reference base
+        refBase = refSequences[refSeqName][refPosition] #The reference base
         
         expectations = expectationsOfBasesAtEachPosition[(refSeqName, refPosition)]
         totalExpectation = sum(expectations.values())
@@ -132,8 +135,8 @@ def variantCallSamFileTargetFn(target, samFile, referenceFastaFile,
         posteriorProbs = calcBasePosteriorProbs(dict(zip(BASES, map(lambda x : float(expectations[x])/totalExpectation, BASES))), refBase, 
                                                 evolutionarySubstitutionMatrix, errorSubstitutionMatrix)                          
         for base in BASES:
-            if base != refBase and posteriorProbs[base] > options.threshold:
-                variantCalls.append(refSeqName, refPosition, base, posteriorProbs[base])
+            if base != refBase and posteriorProbs[base] >= options.threshold:
+                variantCalls.append((refSeqName, refPosition, base, posteriorProbs[base]))
 
     #For each call write out a VCF line representing the output.
     pass
