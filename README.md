@@ -76,10 +76,10 @@ To use a different model to the default one do:
 
 To call single nucleotide variations from an existing alignment ("input.sam") sam file and the output ("output.vcf"):
 
-    marginCaller input.sam output.vcf --jobTree ./jobTree
+    marginCaller input.sam reference.fa output.vcf --jobTree ./jobTree
 
 To NOT marginalise over the read alignments do (this will just use the existing alignment, and will be much quicker):
 
-    marginCaller input.sam output.vcf --noMargin --jobTree ./jobTree
+    marginCaller input.sam reference.fa output.vcf --noMargin --jobTree ./jobTree
 
 ### Citing marginAlign/marginCaller
