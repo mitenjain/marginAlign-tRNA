@@ -1,4 +1,4 @@
-import pysam, sys, os, collections, datetime, operator
+import pysam, sys, os, collections, datetime
 from jobTree.src.bioio import fastaRead, system, fastaWrite, logger
 import numpy as np
 from margin.utils import *
@@ -138,9 +138,10 @@ def variantCallSamFileTargetFn(target, samFile, referenceFastaFile,
             if base != refBase and posteriorProbs[base] >= options.threshold:
                 variantCalls.append((refSeqName, refPosition, base, posteriorProbs[base]))
 
+    # Sort variantCalls
+    sortedvariantCalls = sorted(variantCalls, key=lambda i: (int(i[1])))
 
     #For each call write out a VCF line representing the output.
-    variantCalls.sort(key=operator.itemgetter(1))
     outFile = open(outputVcfFile, "w")
     outFile.write("##fileformat=VCFv4.2\n")
     outFile.write("##fileDate=" + str(datetime.datetime.now()).replace("-", "") + "\n")
@@ -150,7 +151,7 @@ def variantCallSamFileTargetFn(target, samFile, referenceFastaFile,
     outFile.write("##INFO=<ID=NS,Number=1,Type=Integer,Description=marginCaller" + "\n")
     outFile.write("##INFO=<ID=AF,Number=A,Type=Float,Description=Allele Frequency>" + "\n")
     outFile.write("#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\n")
-    for line in variantCalls:
+    for line in sortedvariantCalls:
         refSeqName = line[0]
         refPosition = line[1]
         refBase = refSequences[refSeqName][refPosition]
