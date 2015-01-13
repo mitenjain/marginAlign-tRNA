@@ -154,6 +154,6 @@ def variantCallSamFileTargetFn(target, samFile, referenceFastaFile,
         refSeqName = line[0]
         refPosition = line[1]
         refBase = refSequences[refSeqName][refPosition]
-        outFile.write("\t".join([line[0], str(line[1]), refBase, line[2], str(line[3])]))#line[0] + "\t" + str(line[1]) + "\t" + refBase + "\t" + line[2] + "\t" + str(line[3]) + "\n")
+        outFile.write("\t".join([line[0], str(line[1]), refBase, line[2], str(line[3])]))
         outFile.write("\n")
     outFile.close()
