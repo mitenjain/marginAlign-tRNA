@@ -83,7 +83,5 @@ class TestCase(unittest.TestCase):
         os.system("rm -rf tests/output.vcf testJobTree")
 
 
-
-
 if __name__ == '__main__':
     unittest.main()
