@@ -42,7 +42,7 @@ class TestCase(unittest.TestCase):
         os.system("rm -rf tests/test.sam testJobTree")
 
     def testMarginAlignEm(self):
-        print "Running marginAlign and writing output.hmm"
+        print "Running marginAlign with EM and writing output.hmm"
         os.system("./marginAlign tests/reads.fq tests/reference.fa tests/test.sam --em --outputModel tests/output.hmm --jobTree testJobTree")
         # Validate samfile
         self.validateSam("./tests/test.sam")
