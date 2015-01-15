@@ -1,4 +1,4 @@
-import pysam, sys, os, collections
+import pysam, sys, os, collections, vcf, datetime
 from jobTree.src.bioio import fastaRead, system, fastaWrite, logger
 import numpy as np
 from margin.utils import *
@@ -140,7 +140,62 @@ def variantCallSamFileTargetFn(target, samFile, referenceFastaFile,
 
     # Sort variantCalls
     sortedvariantCalls = sorted(variantCalls, key=lambda i: (int(i[1])))
+    sortedvariantCallsHash = {}
+    for refSeqName, refPosition, base, posteriorProb in sortedvariantCalls:
+        if not refSeqName in sortedvariantCallsHash: #
+            sortedvariantCallsHash[refSeqName] = {}
+        if not refPosition in sortedvariantCallsHash[refSeqName]:
+            sortedvariantCallsHash[refSeqName][refPosition] = []
+        sortedvariantCallsHash[refSeqName][refPosition].append([base, posteriorProb])
 
-    #For each call write out a VCF line representing the output.
-    outFile = open(outputVcfFile, "w")
-    outFile.close()
+    # Create vcf format records, and write to vcf
+    # This is a generic vcf to mimic vcf file structure. I will create a better version of this code in a few days
+    vcfRecords = []
+    # For each call write out a VCF line representing the output
+    vcfFile = open(outputVcfFile, "w")
+    vcfFile.write("##fileformat=VCFv4.2\n")
+    vcfFile.write("##fileDate=" + str(datetime.datetime.now().date()).replace("-", "") + "\n")
+    vcfFile.write("##source=marginCaller\n")
+    vcfFile.write("##reference=" + referenceFastaFile + "\n")
+    vcfFile.write("##contig=<ID=20,length=.,assembly=.,md5=.,species=.,taxonomy=x>\n")
+    vcfFile.write("##phasing=.\n")
+    vcfFile.write("##INFO=<ID=NS,Number=1,Type=Integer,Description=Number of Samples With Data>\n")
+    vcfFile.write("##INFO=<ID=DP,Number=1,Type=Integer,Description=Total Depth>\n")
+    vcfFile.write("##INFO=<ID=AF,Number=A,Type=Float,Description=Allele Frequency>\n")
+    vcfFile.write("##INFO=<ID=AA,Number=1,Type=String,Description=Ancestral Allele>\n")
+    vcfFile.write("##INFO=<ID=DB,Number=0,Type=Flag,Description=dbSNP membership, build 129>\n")
+    vcfFile.write("##INFO=<ID=H2,Number=0,Type=Flag,Description=HapMap2 membership>\n")
+    vcfFile.write("##FILTER=<ID=q10,Description=Quality below 10>\n")
+    vcfFile.write("##FILTER=<ID=s50,Description=Less than 50% of samples have data>\n")
+    vcfFile.write("##FORMAT=<ID=GT,Number=1,Type=String,Description=Genotype>\n")
+    vcfFile.write("##FORMAT=<ID=GQ,Number=1,Type=Integer,Description=Genotype Quality>\n")
+    vcfFile.write("##FORMAT=<ID=DP,Number=1,Type=Integer,Description=Read Depth>\n")
+    vcfFile.write("##FORMAT=<ID=HQ,Number=2,Type=Integer,Description=Haplotype Quality>\n")
+    vcfFile.write("#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\n")
+    # iterate through records now
+    for refSeqName in refSequences:
+        for refPosition, refBase in enumerate(refSequences[refSeqName]):
+            chrom = refSeqName
+            pos = str(refPosition + 1) # 1-based indexing in reference
+            id = "."
+            ref = refBase
+            qual = "."
+            filter = "PASS"
+            fmt = "."
+            alt = "."
+            info = "."
+            if refPosition in sortedvariantCallsHash[refSeqName].keys():
+                variant = []
+                posteriorProb = []
+                for variantCall in sortedvariantCallsHash[refSeqName][refPosition]:
+                    variant.append(variantCall[0])
+                    posteriorProb.append(str(variantCall[1]))
+                alt = ",".join(variant)
+                info = ",".join(posteriorProb)
+            print posteriorProb 
+            # _Record(chrom, pos, ID, ref, alt, qual, filt, info, fmt, self._sample_indexes)
+            Record = refSeqName + "\t" + pos + "\t" + id + "\t" + ref + "\t" + alt + "\t" + qual + "\t" + filter + "\t" + info + "\t" + fmt
+            vcfRecords.append(Record)
+            vcfFile.write(Record)
+            vcfFile.write("\n")
+    vcfFile.close()
