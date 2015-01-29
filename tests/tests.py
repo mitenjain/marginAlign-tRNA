@@ -57,7 +57,7 @@ class TestCase(unittest.TestCase):
         self.assertTrue(os.path.isfile("./tests/input.hmm"))
         print "Running marginAlign and reading model from input.hmm"
         os.system("./marginAlign tests/reads.fq tests/reference.fa tests/test.sam --inputModel tests/input.hmm --jobTree testJobTree")
-       # Validate samfile
+        # Validate samfile
         self.validateSam("./tests/test.sam")
         # Clean up
         print "Cleaning files"
@@ -71,7 +71,7 @@ class TestCase(unittest.TestCase):
         self.assertTrue(os.path.isfile("./tests/output.vcf"))
         # Clean up
         print "Cleaning files"
-      # os.system("rm -rf tests/output.vcf testJobTree")
+        os.system("rm -rf tests/output.vcf testJobTree")
 
     def testMarginCallerNoMarginalize(self):
         # Validate input.sam
