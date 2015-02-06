@@ -16,7 +16,7 @@ To install the code run:
     git submodule update --init
     make
 
-This will build the code. Two executables: "marginAlign" and "marginVar" are in the base directory
+This will build the code. Two executables: "marginAlign" and "marginCaller" are in the base directory
 of the package. Place these binaries on your path if you wish to use them without referring to their absolute
 path on the filesystem.
 
