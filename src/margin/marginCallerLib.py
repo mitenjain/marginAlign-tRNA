@@ -192,7 +192,6 @@ def variantCallSamFileTargetFn(target, samFile, referenceFastaFile,
                     posteriorProb.append(str(variantCall[1]))
                 alt = ",".join(variant)
                 info = ",".join(posteriorProb)
-            print posteriorProb 
             # _Record(chrom, pos, ID, ref, alt, qual, filt, info, fmt, self._sample_indexes)
             Record = refSeqName + "\t" + pos + "\t" + id + "\t" + ref + "\t" + alt + "\t" + qual + "\t" + filter + "\t" + info + "\t" + fmt
             vcfRecords.append(Record)
