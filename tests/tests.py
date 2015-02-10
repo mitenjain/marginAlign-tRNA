@@ -10,8 +10,12 @@ class TestCase(unittest.TestCase):
     def setUp(self):
         unittest.TestCase.setUp(self)
 
+
     def tearDown(self):
         unittest.TestCase.tearDown(self)
+        # Clean up
+        print "Cleaning files"
+        os.system("rm -rf tests/test.sam testJobTree tests/output.hmm* tests/output.vcf")
 
     def validateSam(self, samFile):
         """Checks if a sam file is valid
@@ -33,54 +37,40 @@ class TestCase(unittest.TestCase):
             print "Samfile validation failed"
 
     def testMarginAlignNoEm(self):
-        print "Running marginAlign with no EM"
+        self.setUp()
+        print "\nRunning marginAlign with no EM"
         os.system("./marginAlign tests/reads.fq tests/reference.fa tests/test.sam --jobTree testJobTree")
         # Validate samfile
         self.validateSam("./tests/test.sam")
-        # Clean up
-        print "Cleaning files"
-        os.system("rm -rf tests/test.sam testJobTree")
 
     def testMarginAlignEm(self):
-        print "Running marginAlign with EM and writing output.hmm"
+        print "\nRunning marginAlign with EM and writing output.hmm"
         os.system("./marginAlign tests/reads.fq tests/reference.fa tests/test.sam --em --outputModel tests/output.hmm --jobTree testJobTree")
         # Validate samfile
         self.validateSam("./tests/test.sam")
         # Check if output.hmm files were written
         self.assertTrue(os.path.isfile("./tests/output.hmm"))
-        # Clean up
-        print "Cleaning files"
-        os.system("rm -rf tests/test.sam testJobTree tests/output.hmm*")
 
     def testMarginAlignReadModel(self):
         # Check if input.hmm exists
         self.assertTrue(os.path.isfile("./tests/input.hmm"))
-        print "Running marginAlign and reading model from input.hmm"
+        print "\nRunning marginAlign and reading model from input.hmm"
         os.system("./marginAlign tests/reads.fq tests/reference.fa tests/test.sam --inputModel tests/input.hmm --jobTree testJobTree")
         # Validate samfile
         self.validateSam("./tests/test.sam")
-        # Clean up
-        print "Cleaning files"
-        os.system("rm -rf tests/test.sam testJobTree")
 
     def testMarginCaller(self):
+        print "\nRunning marginCaller"
         # Validate input.sam
         self.validateSam("./tests/input.sam")
-        print "Running marginCaller"
         os.system("./marginCaller tests/input.sam tests/reference.fa tests/output.vcf --jobTree testJobTree")
         self.assertTrue(os.path.isfile("./tests/output.vcf"))
-        # Clean up
-        print "Cleaning files"
-        os.system("rm -rf tests/output.vcf testJobTree")
 
     def testMarginCallerNoMarginalize(self):
+        print "\nRunning marginCaller without marginalize option"
         # Validate input.sam
-        print "Running marginCaller without marginalize option"
         self.validateSam("./tests/input.sam")
         os.system("./marginCaller tests/input.sam tests/reference.fa tests/output.vcf --noMargin --jobTree testJobTree")
-        # Clean up
-        print "Cleaning files"
-        os.system("rm -rf tests/output.vcf testJobTree")
 
 
 if __name__ == '__main__':
