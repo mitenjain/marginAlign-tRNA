@@ -288,7 +288,7 @@ def realignSamFileTargetFn(target, samFile, outputSamFile, readFastqFile,
 
     #target.setFollowOnTargetFn(realignSamFile2TargetFn, args=(tempSamFile, outputSamFile, 
     #                                         readFastqFile, referenceFastaFile, options))
-    options.hmmFile = options.inputModel if options.em else options.outputModel #This
+    options.hmmFile = options.outputModel if options.em else options.inputModel #This
     #setups the hmm to be used the realignment function
     
     target.setFollowOnTargetFn(paralleliseSamProcessingTargetFn, 

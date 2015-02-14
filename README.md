@@ -41,6 +41,9 @@ To update a marginAlign installation, from the base directory type:
     git submodule update --init
     make clean
     make
+    #If you're using virtualenv run the following command to update the python dependencies:
+    virtualenv --no-site-packages --distribute env && source env/bin/activate && pip install -r requirements.txt
+
 
 ### jobTree
 
