@@ -3,7 +3,7 @@ from jobTree.src.bioio import fastaRead, system, fastaWrite, logger
 import numpy as np
 from margin.utils import *
 import math
-from cactus.bar.cactus_expectationMaximisation import Hmm
+from cPecan.cactus_expectationMaximisation import Hmm
 from itertools import product
 try:
     import cPickle 

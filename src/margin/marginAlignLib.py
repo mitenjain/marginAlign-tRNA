@@ -2,8 +2,8 @@ import pysam, sys, os
 from jobTree.src.bioio import reverseComplement, fastaRead, system, fastaWrite, \
 cigarRead, logger, nameValue
 from margin.utils import *
-from cactus.bar import cactus_expectationMaximisation
-from cactus.bar.cactus_expectationMaximisation import Hmm, SYMBOL_NUMBER
+from cPecan import cactus_expectationMaximisation
+from cPecan.cactus_expectationMaximisation import Hmm, SYMBOL_NUMBER
 import numpy as np
 
 def mergeChainedAlignedReads(chainedAlignedReads, refSequence, readSequence):

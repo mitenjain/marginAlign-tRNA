@@ -15,7 +15,7 @@ BASEDIR=$(dirname $0)
 export PYTHONPATH=${BASEDIR}/src:${BASEDIR}/submodules
 
 #Set the path to just the relevant directories
-export PATH=${BASEDIR}/submodules/sonLib/bin:${BASEDIR}/submodules/cactus/bin:${BASEDIR}/submodules/jobTree/bin:${BASEDIR}/submodules/bwa/:${BASEDIR}/submodules/last/src/:${BASEDIR}/submodules/last/scripts/:${PATH}
+export PATH=${BASEDIR}/submodules/sonLib/bin:${BASEDIR}/submodules/jobTree/bin:${BASEDIR}/submodules/bwa/:${BASEDIR}/submodules/last/src/:${BASEDIR}/submodules/last/scripts/:${PATH}
 
 #Run marginAlign
 python ${BASEDIR}/src/margin/marginAlign.py $@

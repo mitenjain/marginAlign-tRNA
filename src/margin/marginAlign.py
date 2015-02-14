@@ -6,8 +6,8 @@ from jobTree.scriptTree.stack import Stack
 from margin.mappers.last import LastChain, LastRealign
 from margin.mappers.bwa import BwaChain, BwaRealign
 from margin.utils import pathToBaseNanoporeDir
-import cactus.bar.cactus_expectationMaximisation
-from cactus.bar.cactus_expectationMaximisation import addExpectationMaximisationOptions
+import cPecan.cactus_expectationMaximisation
+from cPecan.cactus_expectationMaximisation import addExpectationMaximisationOptions
     
 def main():
     #Parse the inputs args/options
@@ -29,7 +29,7 @@ def main():
                       default=0.0, type=float)
     
     #Add the cactus_expectation maximisation options
-    options = cactus.bar.cactus_expectationMaximisation.Options()
+    options = cPecan.cactus_expectationMaximisation.Options()
     options.inputModel = os.path.join(pathToBaseNanoporeDir(), "margin", "mappers", "last_hmm_20.txt")
     options.modelType="fiveStateAsymmetric" #"threeStateAsymmetric"
     options.optionsToRealign="--diagonalExpansion=10 --splitMatrixBiggerThanThis=300" 

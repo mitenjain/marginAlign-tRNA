@@ -34,3 +34,6 @@
 [submodule "submodules/tokyocabinet"]
 	path = submodules/tokyocabinet
 	url = https://github.com/UCSantaCruzComputationalGenomicsLab/tokyocabinet.git
+[submodule "submodules/cPecan"]
+	path = submodules/cPecan
+	url = git@github.com:benedictpaten/cPecan.git
