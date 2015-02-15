@@ -3,7 +3,7 @@ from jobTree.src.bioio import fastaRead, system, fastaWrite, logger
 import numpy as np
 from margin.utils import *
 import math
-from cPecan.cactus_expectationMaximisation import Hmm
+from cPecan.cPecanEm import Hmm
 from itertools import product
 try:
     import cPickle 
@@ -42,9 +42,9 @@ def posteriorProbabilityCalculationTargetFn(target, exonerateCigarStringFile,
     for exonerateCigarString, (querySequenceName, querySequence) in \
     zip(open(exonerateCigarStringFile, "r"), fastaRead(querySequenceFile)):
         fastaWrite(tempReadFile, querySequenceName, querySequence)
-        #Call to cactus_realign
+        #Call to cPecanRealign
         tempPosteriorProbsFile = os.path.join(target.getLocalTempDir(), "posteriorProbs.txt")
-        system("echo %s | cactus_realign %s %s --diagonalExpansion=10 \
+        system("echo %s | cPecanRealign %s %s --diagonalExpansion=10 \
         --splitMatrixBiggerThanThis=100 --outputAllPosteriorProbs=%s --loadHmm=%s" % \
                    (exonerateCigarString[:-1], tempRefFile, tempReadFile, 
                     tempPosteriorProbsFile, options.alignmentModel))

@@ -6,8 +6,8 @@ from jobTree.scriptTree.stack import Stack
 from margin.mappers.last import LastChain, LastRealign
 from margin.mappers.bwa import BwaChain, BwaRealign
 from margin.utils import pathToBaseNanoporeDir
-import cPecan.cactus_expectationMaximisation
-from cPecan.cactus_expectationMaximisation import addExpectationMaximisationOptions
+import cPecan.cPecanEm
+from cPecan.cPecanEm import addExpectationMaximisationOptions
     
 def main():
     #Parse the inputs args/options
@@ -28,8 +28,8 @@ def main():
     parser.add_option("--matchGamma", dest="matchGamma", help="Set the match gamma for the AMAP function", 
                       default=0.0, type=float)
     
-    #Add the cactus_expectation maximisation options
-    options = cPecan.cactus_expectationMaximisation.Options()
+    #Add the cPecan expectation maximisation options
+    options = cPecan.cPecanEm.Options()
     options.inputModel = os.path.join(pathToBaseNanoporeDir(), "margin", "mappers", "last_hmm_20.txt")
     options.modelType="fiveStateAsymmetric" #"threeStateAsymmetric"
     options.optionsToRealign="--diagonalExpansion=10 --splitMatrixBiggerThanThis=300" 

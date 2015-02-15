@@ -2,8 +2,8 @@ import pysam, sys, os
 from jobTree.src.bioio import reverseComplement, fastaRead, system, fastaWrite, \
 cigarRead, logger, nameValue
 from margin.utils import *
-from cPecan import cactus_expectationMaximisation
-from cPecan.cactus_expectationMaximisation import Hmm, SYMBOL_NUMBER
+from cPecan import cPecanEm
+from cPecan.cPecanEm import Hmm, SYMBOL_NUMBER
 import numpy as np
 
 def mergeChainedAlignedReads(chainedAlignedReads, refSequence, readSequence):
@@ -225,7 +225,7 @@ def learnModelFromSamFileTargetFn(target, samFile, readFastqFile,
     
     unnormalisedOutputModel = os.path.join(target.getGlobalTempDir(), 
                                            "unnormalisedOutputModel.hmm")
-    target.addChildTargetFn(cactus_expectationMaximisation.expectationMaximisationTrials, 
+    target.addChildTargetFn(cPecanEm.expectationMaximisationTrials, 
                             args=(" ".join([reads, referenceFastaFile ]), cigars, 
                                   unnormalisedOutputModel, options))
     
@@ -311,9 +311,9 @@ def realignCigarTargetFn(target, exonerateCigarStringFile, referenceSequenceName
     for exonerateCigarString, (querySequenceName, querySequence) in \
     zip(open(exonerateCigarStringFile, "r"), fastaRead(querySequenceFile)):
         fastaWrite(tempReadFile, querySequenceName, querySequence)
-        #Call to cactus_realign
+        #Call to cPecanRealign
         loadHmm = nameValue("loadHmm", options.hmmFile)
-        system("echo %s | cactus_realign %s %s --diagonalExpansion=10 \
+        system("echo %s | cPecanRealign %s %s --diagonalExpansion=10 \
         --splitMatrixBiggerThanThis=3000 %s --gapGamma=%s --matchGamma=%s >> %s" % \
                (exonerateCigarString[:-1], tempRefFile, tempReadFile, loadHmm, 
                 options.gapGamma, options.matchGamma, outputCigarFile))
