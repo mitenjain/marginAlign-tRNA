@@ -75,6 +75,10 @@ To use a different model to the default one do:
 
     marginAlign input.fastq reference.fasta output.sam --inputModel input.hmm --jobTree ./jobTree
 
+marginAlign expects the headers in the FASTQ file to be unique. Alternatively, a FASTQ file with unique headers can be created using the uniquifyFastq utility. To use uniquifyFastq do:
+
+    uniquifyFastq input.fastq input_with_unique_headers.fastq
+
 ### Running marginCaller
 
 To call single nucleotide variations from an existing alignment ("input.sam") sam file and the output ("output.vcf"):
