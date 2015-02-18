@@ -94,50 +94,7 @@ def getNullSubstitutionMatrix():
     """
     return dict(zip(product(BASES, BASES), [1.0]*len(BASES)**2))
 
-def variantCallSamFileTargetFn(target, samFile, referenceFastaFile, 
-                            outputVcfFile, tempPosteriorProbFiles, options):
-    """Collates the posterior probabilities and calls SNVs for each reference base.
-    """
-    #Hash to store posterior probabilities in
-    expectationsOfBasesAtEachPosition = {}
-
-    #Read in the posterior probs from the pickles from the tempPosteriorProbFiles files
-    for tempPosteriorProbFile in tempPosteriorProbFiles:
-        fileHandle = open(tempPosteriorProbFile, 'r')
-        expectationsOfBasesAtEachPosition2 = cPickle.load(fileHandle)
-        for key in expectationsOfBasesAtEachPosition2:
-            if key not in expectationsOfBasesAtEachPosition:
-                expectationsOfBasesAtEachPosition[key] = dict(zip(BASES, [0.0]*len(BASES)))
-            for base in BASES:
-                expectationsOfBasesAtEachPosition[key][base] += expectationsOfBasesAtEachPosition2[key][base]
-        fileHandle.close()
-    
-    #Array to store the VCF calculations
-    variantCalls = [] #Each key is of the form (referenceName, referencePosition, non-ref base, probability)
-    
-    #Hash of ref seq names to sequences
-    refSequences = getFastaDictionary(referenceFastaFile) 
-    
-    #Substitution matrix modeling the difference between reads and the true reference
-    errorSubstitutionMatrix = loadHmmSubstitutionMatrix(options.errorModel)
-    
-    #Substitution matrix modeling the difference between  the true reference and the given reference
-    evolutionarySubstitutionMatrix = getNullSubstitutionMatrix() #Currently stupid
-    
-    #Now do the SNV calculations
-    for refSeqName, refPosition in expectationsOfBasesAtEachPosition:
-        refBase = refSequences[refSeqName][refPosition] #The reference base
-        
-        expectations = expectationsOfBasesAtEachPosition[(refSeqName, refPosition)]
-        totalExpectation = sum(expectations.values())
-        assert totalExpectation > 0 
-        #This is the calculation of the posterior probability
-        posteriorProbs = calcBasePosteriorProbs(dict(zip(BASES, map(lambda x : float(expectations[x])/totalExpectation, BASES))), refBase, 
-                                                evolutionarySubstitutionMatrix, errorSubstitutionMatrix)                          
-        for base in BASES:
-            if base != refBase and posteriorProbs[base] >= options.threshold:
-                variantCalls.append((refSeqName, refPosition, base, posteriorProbs[base]))
-
+def variantCallSorter(variantCalls):
     # Sort variantCalls
     sortedvariantCalls = sorted(variantCalls, key=lambda i: (int(i[1])))
     sortedvariantCallsHash = {}
@@ -147,7 +104,9 @@ def variantCallSamFileTargetFn(target, samFile, referenceFastaFile,
         if not refPosition in sortedvariantCallsHash[refSeqName]:
             sortedvariantCallsHash[refSeqName][refPosition] = []
         sortedvariantCallsHash[refSeqName][refPosition].append([base, posteriorProb])
+    return sortedvariantCallsHash
 
+def VCFWriter(referenceFastaFile, refSequences, sortedvariantCallsHash, outputVcfFile):
     # Create vcf format records, and write to vcf
     # This is a generic vcf to mimic vcf file structure. I will create a better version of this code in a few days
     vcfRecords = []
@@ -198,3 +157,53 @@ def variantCallSamFileTargetFn(target, samFile, referenceFastaFile,
             vcfFile.write(Record)
             vcfFile.write("\n")
     vcfFile.close()
+
+def variantCallSamFileTargetFn(target, samFile, referenceFastaFile, 
+                            outputVcfFile, tempPosteriorProbFiles, options):
+    """Collates the posterior probabilities and calls SNVs for each reference base.
+    """
+    #Hash to store posterior probabilities in
+    expectationsOfBasesAtEachPosition = {}
+
+    #Read in the posterior probs from the pickles from the tempPosteriorProbFiles files
+    for tempPosteriorProbFile in tempPosteriorProbFiles:
+        fileHandle = open(tempPosteriorProbFile, 'r')
+        expectationsOfBasesAtEachPosition2 = cPickle.load(fileHandle)
+        for key in expectationsOfBasesAtEachPosition2:
+            if key not in expectationsOfBasesAtEachPosition:
+                expectationsOfBasesAtEachPosition[key] = dict(zip(BASES, [0.0]*len(BASES)))
+            for base in BASES:
+                expectationsOfBasesAtEachPosition[key][base] += expectationsOfBasesAtEachPosition2[key][base]
+        fileHandle.close()
+    
+    #Array to store the VCF calculations
+    variantCalls = [] #Each key is of the form (referenceName, referencePosition, non-ref base, probability)
+    
+    #Hash of ref seq names to sequences
+    refSequences = getFastaDictionary(referenceFastaFile) 
+    
+    #Substitution matrix modeling the difference between reads and the true reference
+    errorSubstitutionMatrix = loadHmmSubstitutionMatrix(options.errorModel)
+    
+    #Substitution matrix modeling the difference between  the true reference and the given reference
+    evolutionarySubstitutionMatrix = getNullSubstitutionMatrix() #Currently stupid
+    
+    #Now do the SNV calculations
+    for refSeqName, refPosition in expectationsOfBasesAtEachPosition:
+        refBase = refSequences[refSeqName][refPosition] #The reference base
+        
+        expectations = expectationsOfBasesAtEachPosition[(refSeqName, refPosition)]
+        totalExpectation = sum(expectations.values())
+        assert totalExpectation > 0 
+        #This is the calculation of the posterior probability
+        posteriorProbs = calcBasePosteriorProbs(dict(zip(BASES, map(lambda x : float(expectations[x])/totalExpectation, BASES))), refBase, 
+                                                evolutionarySubstitutionMatrix, errorSubstitutionMatrix)                          
+        for base in BASES:
+            if base != refBase and posteriorProbs[base] >= options.threshold:
+                variantCalls.append((refSeqName, refPosition, base, posteriorProbs[base]))
+
+    # Sort variantCalls
+    sortedvariantCallsHash = variantCallSorter(variantCalls)
+
+    # Write to VCF (this is a generic function that mimics VCF format)
+    VCFWriter(referenceFastaFile, refSequences, sortedvariantCallsHash, outputVcfFile)
