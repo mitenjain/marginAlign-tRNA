@@ -146,7 +146,7 @@ def getFastaDictionary(fastaFile):
     fasta sequence
     """
     names = map(lambda x : x[0].split()[0], fastaRead(open(fastaFile, 'r')))
-    assert len(names) == len(set(names)) #Check all the names are unique
+    assert len(names) == len(set(names)) #Check all the names in the sequence file are unique
     #Hash of names to sequences
     return dict(map(lambda x : (x[0].split()[0], x[1]), fastaRead(open(fastaFile, 'r')))) 
 
