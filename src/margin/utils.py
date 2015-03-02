@@ -246,8 +246,8 @@ def paralleliseSamProcessingTargetFn(target, samFile,
             tempOutputFiles.append(os.path.join(target.getGlobalTempDir(), 
                                                "tempOutput_%i.txt" % childCount))
             target.addChildTargetFn(childTargetFn,
-                                    args=(tempExonerateFile, sam.getrname(aR.rname), 
-                                          refSequences[sam.getrname(aR.rname)], 
+                                    args=(tempExonerateFile, refName, 
+                                          refSequences[refName], 
                                           tempQueryFile, tempOutputFiles[-1], options))
     
     for aR, index in zip(samIterator(sam), xrange(sys.maxint)): 
