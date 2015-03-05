@@ -21,7 +21,7 @@ of the package. Place these binaries on your path if you wish to use them withou
 path on the filesystem.
 
 ### Creating a virtual environment to handle python dependencies
-marginAlign uses numpy and pysam. The system python coule be used if these dependencies are present. Otherwise, a virtual environment can be created by running the following command in the margin base directory:
+marginAlign uses numpy and pysam. The system python could be used if these dependencies are present. Otherwise, a virtual environment can be created by running the following command in the margin base directory:
 
     virtualenv --no-site-packages --distribute env && source env/bin/activate && pip install -r requirements.txt
 
