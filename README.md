@@ -90,7 +90,9 @@ To NOT marginalise over the read alignments do (this will just use the existing 
     marginCaller input.sam reference.fa output.vcf --noMargin --jobTree ./jobTree
 
 ### Utilities
+
 To get coverage plots for samfiles use:
-        ./coveragePlots input.fastq reference.fasta input.sam outputTag
+    
+    ./coveragePlots input.fastq reference.fasta input.sam outputTag
 
 ### Citing marginAlign/marginCaller
