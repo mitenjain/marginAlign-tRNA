@@ -93,6 +93,6 @@ To NOT marginalise over the read alignments do (this will just use the existing 
 
 To get coverage plots for samfiles use:
     
-    ./coveragePlots input.fastq reference.fasta input.sam outputTag
+    ./plots input.fastq reference.fasta input.sam outputTag
 
 ### Citing marginAlign/marginCaller
