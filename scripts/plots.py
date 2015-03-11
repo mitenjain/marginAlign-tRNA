@@ -191,21 +191,20 @@ def main(myCommandLine=None):
     t0 = time.time()
 
     #Parse the inputs args/options
-    parser = OptionParser(usage="usage: input.fastq reference.fasta input.sam output.xml", 
+    parser = OptionParser(usage="usage: input.fastq reference.fasta input.sam", 
                           version="%prog 0.1")
 
     #Parse the options/arguments
     options, args = parser.parse_args()
 
     #Exit if the arguments are not what we expect
-    if len(args) != 4:
-        raise RuntimeError("Expected four arguments, got: %s" % " ".join(args))
+    if len(args) != 3:
+        raise RuntimeError("Expected three arguments, got: %s" % " ".join(args))
  
     readFastqFile = args[0]
     referenceFastaFile = args[1]
     samFile = args[2]
-    outputTag = args[3]
-
+    outputTag = samFile.split(".sam")[0]
     LocalCoverage(readFastqFile, referenceFastaFile, samFile, outputTag).run(globalAlignment=False)
 
     print >> sys.stderr, "\n", "Total time for the program %.3f" % (time.time()-t0), "s"
