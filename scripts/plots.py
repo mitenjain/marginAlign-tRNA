@@ -175,12 +175,6 @@ class LocalCoverage(AbstractAnalysis):
                 system("Rscript ./scripts/plots.R {} {}".format(self.outputName + "_" + outputName + ".txt", self.outputName + "_" + outputName + ".pdf"))
 
 
-class GlobalCoverage(LocalCoverage):
-    def run(self):
-        """Calculates coverage, treating alignments as global alignments.
-        """
-        LocalCoverage.run(self, globalAlignment=True)
-
 ##################################################################################
 # Main
 # Here is the main program
@@ -205,7 +199,11 @@ def main(myCommandLine=None):
     referenceFastaFile = args[1]
     samFile = args[2]
     outputTag = samFile.split(".sam")[0]
-    LocalCoverage(readFastqFile, referenceFastaFile, samFile, outputTag).run(globalAlignment=False)
+
+    # Calculate coverage, treating alignments as local alignments.
+    LocalCoverage(readFastqFile, referenceFastaFile, samFile, outputTag + "_Local").run(globalAlignment=False)
+    # Calculate coverage, treating alignments as global alignments.
+    LocalCoverage(readFastqFile, referenceFastaFile, samFile, outputTag + "_Global").run(globalAlignment=True)
 
     print >> sys.stderr, "\n", "Total time for the program %.3f" % (time.time()-t0), "s"
 
