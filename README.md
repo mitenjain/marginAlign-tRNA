@@ -96,3 +96,9 @@ To get coverage plots for samfiles use:
     ./plots input.fastq reference.fasta input.sam
 
 ### Citing marginAlign/marginCaller
+
+Please cite margin align as:
+
+    "Nat Methods. 2015 Apr;12(4):351-6. doi: 10.1038/nmeth.3290. Epub 2015 Feb 16.
+    Improved data analysis for the MinION nanopore sequencer.
+    Jain M1, Fiddes IT1, Miga KH1, Olsen HE1, Paten B1, Akeson M1."
