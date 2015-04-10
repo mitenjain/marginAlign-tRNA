@@ -2,7 +2,7 @@ from jobTree.scriptTree.target import Target
 from margin.marginAlignLib import chainSamFile, realignSamFileTargetFn
 import os
 from sonLib.bioio import system
-from margin.utils import AlignedPair, getFastaDictionary, getFastqDictionary, getExonerateCigarFormatString, samIterator
+from margin.utils import getFastaDictionary, getFastqDictionary, getExonerateCigarFormatString, samIterator
 
 class AbstractMapper(Target):
     """Base class for mappers. Inherit this class to create a mapper

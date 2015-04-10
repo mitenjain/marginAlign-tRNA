@@ -7,7 +7,8 @@ from cPecan.cPecanEm import Hmm, SYMBOL_NUMBER
 import numpy as np
 
 def mergeChainedAlignedReads(chainedAlignedReads, refSequence, readSequence):
-    """Makes a global alignment for the given chained reads.
+    """Makes a single alignment for the given chained reads. Will soft soft clip
+    the unaligned prefix and suffix of the readSequence.
     
     From doc on building pysam line
     a = pysam.AlignedRead()
@@ -38,19 +39,14 @@ def mergeChainedAlignedReads(chainedAlignedReads, refSequence, readSequence):
     #cAR.qual = "<" * len(readSequence)
     #cAR.tags = aR.tags 
     cAR.rnext = -1
-    cAR.pos = 0
+    cAR.pos = aR.pos #Reference start
     cAR.is_reverse = aR.is_reverse
-    if cAR.is_reverse:
-        cAR.seq = reverseComplement(readSequence)
-    else:
-        cAR.seq = readSequence
+    cAR.seq = reverseComplement(readSequence) if cAR.is_reverse else readSequence
     cAR.rname = aR.rname
     cigarList = []
-    pPos = 0
-    if cAR.is_reverse: #Iterate from the other end of the sequence
-        pQPos = -(len(readSequence)-1)
-    else:
-        pQPos = 0
+    pPos = aR.pos
+    #Iterate from the other end of the sequence if reversed
+    pQPos = -(len(readSequence)-1) if cAR.is_reverse else 0 
         
     for aR in chainedAlignedReads:
         assert cAR.is_reverse == aR.is_reverse
@@ -61,10 +57,11 @@ def mergeChainedAlignedReads(chainedAlignedReads, refSequence, readSequence):
             pPos = aR.pos 
     
         #Add an insertion representing the preceding unaligned read positions
-        qPos = getAbsoluteReadOffset(aR, refSequence, readSequence)
+        #make it a soft clip if it is the first chained alignment
+        qPos = getFirstNonClippedPositionInRead(aR, readSequence)
         assert qPos >= pQPos
         if qPos > pQPos:
-            cigarList.append((1, qPos - pQPos)) 
+            cigarList.append((4 if aR == chainedAlignedReads[0] else 1, qPos - pQPos)) 
             pQPos = qPos
         
         #Add the operations of the cigar, filtering hard and soft clipping
@@ -77,43 +74,52 @@ def mergeChainedAlignedReads(chainedAlignedReads, refSequence, readSequence):
             if op in (0, 1): #Is match or insertion
                 pQPos += length
         
-    #Now add any trailing deletions/insertions
     assert pPos <= len(refSequence)
-    if pPos < len(refSequence):
-        cigarList.append((2, len(refSequence) - pPos))
     
+    #Set reference end coordinate (which is exclusive)
+    #cAR.aend = pPos #We don't do this because it is set by cigar string
+    
+    #Now add any trailing, necessary soft clipping
     if cAR.is_reverse:
         assert pQPos <= 1
         if pQPos < 1:
-            cigarList.append((1, -pQPos + 1))
+            cigarList.append((4, -pQPos + 1))
     else:
         assert pQPos <= len(readSequence)
         if pQPos < len(readSequence):
-            cigarList.append((1, len(readSequence) - pQPos))
-    
-    #Check coordinates
-    #print cAR.is_reverse, sum([ length for op, length in cigarList if op in (0, 2)]),  
-    #len(refSequence), sum([ length for op, length in cigarList if op in (0, 1)]), 
-    #len(readSequence), cAR.qname
-    assert sum([ length for op, length in cigarList if op in (0, 2)]) == len(refSequence)
-    assert sum([ length for op, length in cigarList if op in (0, 1)]) == len(readSequence)
+            cigarList.append((4, len(readSequence) - pQPos))
     
     cAR.cigar = tuple(cigarList)
+    
+    #Check ops
+    for op, length in cAR.cigar: #We should have no hard clipped ops
+        assert op in (0, 1, 2, 4)
+    
+    #Check coordinates 
+    assert sum([ length for op, length in cigarList if op in (0, 2)]) == cAR.aend - cAR.pos
+    assert cAR.pos >= 0 and cAR.pos < len(refSequence)
+    assert cAR.aend >= 0 and cAR.aend <= len(refSequence)
+    assert sum([ length for op, length in cigarList if op in (0, 1, 4)]) == len(readSequence)
+    assert cAR.qstart >= 0 and cAR.qstart < len(readSequence)
+    assert cAR.qend >= 0 and cAR.qend <= len(readSequence)
+    assert cAR.qstart + sum([ length for op, length in cigarList if op in (0, 1)]) == cAR.qend
     
     return cAR
 
 def chainFn(alignedReads, refSeq, readSeq, scoreFn=\
             lambda alignedRead, refSeq, readSeq : \
-            len(list(AlignedPair.iterator(alignedRead, refSeq, readSeq))), maxGap=200):
+            sum([ length for op, length in alignedRead.cigar if op == 0]), maxGap=200):
+     #Score function is number of aligned pairs
     """Gets the highest scoring chain of alignments on either the forward or reverse 
     strand. Score is (by default) number of aligned positions.
     """
     def getStartAndEndCoordinates(alignedRead):
-        """Gets the start and end coordinates in both the reference and query
+        """Gets the start and end coordinates in both the reference and query, using coordinates
+        relative to the original read and reference equence
         """
-        alignedPairs = list(AlignedPair.iterator(alignedRead, refSeq, readSeq))
-        return alignedPairs[0].refPos, alignedPairs[0].getSignedReadPos(), \
-    alignedPairs[-1].refPos, alignedPairs[-1].getSignedReadPos()
+        return alignedRead.pos, getFirstNonClippedPositionInRead(alignedRead, readSeq), \
+        alignedRead.aend-1, getLastNonClippedPositionInRead(alignedRead, readSeq) 
+    
     alignedReadToScores = dict([ (aR, scoreFn(aR, refSeq, readSeq)) for aR in alignedReads])
     alignedReadToCoordinates = dict([ (aR, getStartAndEndCoordinates(aR)) for \
                                      aR in alignedReads])
@@ -177,7 +183,10 @@ def chainSamFile(samFile, outputSamFile, readFastqFile, referenceFastaFile,
         readSeq = readSequences[readName]
         chainedAlignedReads.append(mergeChainedAlignedReads(chainFn(alignedReads, 
                                                 refSeq, readSeq), refSeq, readSeq))
-    chainedAlignedReads.sort() #Sort by reference coordinate
+        
+    #Sort chained alignments by reference coordinates
+    chainedAlignedReads.sort(key=lambda aR : (aR.pos, aR.aend)) 
+    
     for cAR in chainedAlignedReads:
         outputSam.write(cAR)
     sam.close()
@@ -196,6 +205,8 @@ def learnModelFromSamFileTargetFn(target, samFile, readFastqFile,
     for name in readSequences.keys():
         seq = readSequences[name]
         fastaWrite(fH, name, seq)
+        #We write the reverse complements too, because some reads are aligned to it 
+        #and we're too lazy to do the coordinate transform
         fastaWrite(fH, name + "_reverse", reverseComplement(seq))
     fH.close()
     
@@ -204,23 +215,14 @@ def learnModelFromSamFileTargetFn(target, samFile, readFastqFile,
     fH = open(cigars, 'w')
     sam = pysam.Samfile(samFile, "r" )
     for aR in sam: #Iterate on the sam lines realigning them in parallel            
-        #Because these are global alignments with reverse complement coordinates 
-        #reversed the following should all be true
-        assert aR.pos == 0
-        assert aR.qstart == 0
-        assert aR.qend == len(readSequences[aR.qname]) #aR.query)
-        assert aR.aend == len(refSequences[sam.getrname(aR.rname)])
-        assert len(aR.query) == len(readSequences[aR.qname])
+        assert len(aR.seq) == len(readSequences[aR.qname]) #Checks that length of read sequences agree
         if aR.is_reverse: #Deal with reverse complements
-            assert aR.query.upper() == reverseComplement(readSequences[aR.qname]).upper()
-            aR.qname += "_reverse"
+            assert aR.seq.upper() == reverseComplement(readSequences[aR.qname]).upper()
+            aR.qname += "_reverse" #This references the reverse complement form of the string
         else:
-            assert aR.query.upper() == readSequences[aR.qname].upper()
+            assert aR.seq.upper() == readSequences[aR.qname].upper() #Checks reads match
             
         fH.write(getExonerateCigarFormatString(aR, sam) + "\n")
-        #Exonerate format Cigar string, using global coordinates
-        #fH.write(getGlobalAlignmentExonerateCigarFormatString(aR, sam, 
-        #refSequences[sam.getrname(aR.rname)], readSequences[aR.qname]) + "\n")
     fH.close()
     
     unnormalisedOutputModel = os.path.join(target.getGlobalTempDir(), 
@@ -286,8 +288,6 @@ def realignSamFileTargetFn(target, samFile, outputSamFile, readFastqFile,
         target.addChildTargetFn(learnModelFromSamFileTargetFn, args=(tempSamFile, 
                                     readFastqFile, referenceFastaFile, options))
 
-    #target.setFollowOnTargetFn(realignSamFile2TargetFn, args=(tempSamFile, outputSamFile, 
-    #                                         readFastqFile, referenceFastaFile, options))
     options.hmmFile = options.outputModel if options.em else options.inputModel #This
     #setups the hmm to be used the realignment function
     
@@ -335,8 +335,24 @@ def realignSamFile3TargetFn(target, samFile, referenceFastaFile,
     for aR, pA in zip(samIterator(sam), cigarIterator()): #Iterate on the sam lines 
         #realigning them in parallel
         
-        #Convert to sam line
-        aR.cigar = tuple([ (op.type, op.length) for op in pA.operationList ])
+        #Check replacement cigar string covers the aligned portion of the read and reference
+        assert sum(map(lambda op : op.length if op.type in (0, 1) else 0, pA.operationList)) == aR.qend - aR.qstart
+        assert sum(map(lambda op : op.length if op.type in (0, 2) else 0, pA.operationList)) == aR.aend - aR.pos
+        
+        #Replace alignment by converting exonerate ops to aligned read ops,
+        #adding soft clipping unaligned prefix and suffix of read
+        ops = [ ]
+        if aR.qstart > 0:
+            ops.append((4, aR.qstart))
+        ops += map(lambda op : (op.type, op.length), pA.operationList)
+        if aR.qend < len(aR.seq):
+            ops.append((4, len(aR.seq) - aR.qend))
+        
+        #Checks the final operation list is the correct length
+        assert sum(map(lambda (type, length) : length if type in (0,1,4) else 0, ops)) == \
+        sum(map(lambda (type, length) : length if type in (0,1,4) else 0, aR.cigar))
+        
+        aR.cigar = tuple(ops)
         
         #Write out
         outputSam.write(aR)
