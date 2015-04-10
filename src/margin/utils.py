@@ -9,46 +9,47 @@ def pathToBaseNanoporeDir():
     i = absSymPath(__file__)
     return os.path.split(os.path.split(i)[0])[0]
 
-def getFirstNonClippedPositionInRead(alignedRead, readSeq):
+def getFirstNonClippedPositionInRead(alignedSegment, readSeq):
     """Gets the coordinate of the first non-clipped position in the read relative to the 
     complete read sequence (including any hard clipped bases).
     If the alignment is on the reverse strand the coordinate is negative, e.g. the reverse strand coordinate of
     the 2nd position of the read sequence is -1 (0 based).
     """
-    if alignedRead.cigar[0][0] == 5: #Translate the read position to the original 
+    if alignedSegment.cigar[0][0] == 5: #Translate the read position to the original 
         #coordinates by removing hard clipping
-        readOffset = alignedRead.cigar[0][1]
+        readOffset = alignedSegment.cigar[0][1]
     else:
         readOffset = 0
-    if alignedRead.is_reverse: #SEQ is reverse complemented
+    if alignedSegment.is_reverse: #SEQ is reverse complemented
         readOffset = -(len(readSeq) - 1 - readOffset)
-    readOffset += alignedRead.qstart #This removes any soft-clipping
+    readOffset += alignedSegment.query_alignment_start #This removes any soft-clipping
     return readOffset
 
-def getLastNonClippedPositionInRead(alignedRead, readSeq):
+def getLastNonClippedPositionInRead(alignedSegment, readSeq):
     """As getFirstNonClippedPositionInRead, but returns the last
     non-clipped position in the read, relative to the complete read sequence.
     """
-    return getFirstNonClippedPositionInRead(alignedRead, readSeq) + alignedRead.qend- alignedRead.qstart -1
+    return getFirstNonClippedPositionInRead(alignedSegment, readSeq) + \
+        alignedSegment.query_alignment_end - alignedSegment.query_alignment_start -1
 
-def getExonerateCigarFormatString(alignedRead, sam):
+def getExonerateCigarFormatString(alignedSegment, sam):
     """Gets a complete exonerate like cigar-string describing the sam line,
-    with the cigar described with respect to the alignedRead.query_sequence string,
+    with the cigar described with respect to the alignedSegment.query_sequence string,
     which includes softclip bases, but not hard-clipped bases.
     """
-    for op, length in alignedRead.cigar:
+    for op, length in alignedSegment.cigar:
         assert op in (0, 1, 2, 4, 5)
     translation = { 0:"M", 1:"I", 2:"D" }
     cigarString = " ".join([ "%s %i" % (translation[op], length) for op, length in 
-                            alignedRead.cigar if op in translation ]) #Ignore soft clips
+                            alignedSegment.cigar if op in translation ]) #Ignore soft clips
     completeCigarString = "cigar: %s %i %i + %s %i %i + 1 %s" % (
-    alignedRead.qname, alignedRead.qstart, alignedRead.qend, 
-    sam.getrname(alignedRead.rname), alignedRead.pos, alignedRead.aend, cigarString)
+    alignedSegment.query_name, alignedSegment.qstart, alignedSegment.query_alignment_end, 
+    sam.getrname(alignedSegment.reference_id), alignedSegment.reference_start, alignedSegment.reference_end, cigarString)
     ##Assertions
     pA = cigarReadFromString(completeCigarString) #This checks it's an okay cigar
     assert sum([ op.length for op in pA.operationList if op.type == \
                 PairwiseAlignment.PAIRWISE_MATCH ]) == \
-                len([ readPos for readPos, refPos in alignedRead.aligned_pairs if \
+                len([ readPos for readPos, refPos in alignedSegment.aligned_pairs if \
                      readPos != None and refPos != None ])
     ##End assertions
     return completeCigarString
@@ -73,6 +74,7 @@ def getFastaDictionary(fastaFile):
     #Hash of names to sequences
     return dict(map(lambda x : (x[0].split()[0], x[1]), fastaRead(open(fastaFile, 'r')))) 
 
+###TODO: Get rid of this method - uses too much memory
 def getFastqDictionary(fastqFile):
     """Returns a dictionary of the first words of fastq headers to their corresponding 
     fastq sequence
@@ -111,6 +113,7 @@ def makeFastqSequenceNamesUnique(inputFastqFile, outputFastqFile):
     fileHandle.close()
     return outputFastqFile
 
+"""
 def normaliseQualValues(inputFastqFile, outputFastqFile):
     """Makes a fastq with valid qual values
     """
@@ -121,13 +124,14 @@ def normaliseQualValues(inputFastqFile, outputFastqFile):
         fastqWrite(fileHandle, name, seq, quals)
     fileHandle.close()
     return outputFastqFile
+"""
 
 def samIterator(sam):
     """Creates an iterator over the aligned reads in a sam file, filtering out
     any reads that have no reference alignment.
     """
     for aR in sam:
-        if aR.rname != -1:
+        if aR.reference_id != -1:
             yield aR
 
 def combineSamFiles(baseSamFile, extraSamFiles, outputSamFile):
@@ -176,7 +180,7 @@ def paralleliseSamProcessingTargetFn(target, samFile,
     for aR, index in zip(samIterator(sam), xrange(sys.maxint)): 
         #Iterate on the sam lines realigning them in parallel
         if totalSeqLength > options.maxAlignmentLengthPerJob or \
-        refName != sam.getrname(aR.rname):
+        refName != sam.getrname(aR.reference_id):
             makeChild()
             tempExonerateFile = os.path.join(target.getGlobalTempDir(), 
                                              "tempExonerateCigar_%s.cig" % childCount)
@@ -188,9 +192,9 @@ def paralleliseSamProcessingTargetFn(target, samFile,
             totalSeqLength = 0
         
         tempExonerateFileHandle.write(getExonerateCigarFormatString(aR, sam) + "\n")
-        fastaWrite(tempQueryFileHandle, aR.qname, aR.seq) #This is the query sequence, including soft clipped bases, but excluding hard clip bases
-        totalSeqLength += len(aR.seq)
-        refName = sam.getrname(aR.rname)
+        fastaWrite(tempQueryFileHandle, aR.query_name, aR.query_sequence) #This is the query sequence, including soft clipped bases, but excluding hard clip bases
+        totalSeqLength += len(aR.query_sequence)
+        refName = sam.getrname(aR.reference_id)
             
     makeChild()
     
