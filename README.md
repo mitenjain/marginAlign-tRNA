@@ -11,7 +11,7 @@ The package comes with two programs: marginAlign, a short read aligner, and marg
 To install the code run:
 
     git clone git://github.com/benedictpaten/margin.git
-    cd margin
+    cd marginAlign
     git pull
     git submodule update --init
     make
