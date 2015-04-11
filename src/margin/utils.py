@@ -1,5 +1,5 @@
 import pysam, sys, os
-from jobTree.src.bioio import reverseComplement, fastaRead, fastqRead, \
+from jobTree.src.bioio import fastaRead, fastqRead, \
 cigarReadFromString,PairwiseAlignment, fastaWrite, fastqWrite, logger, absSymPath
 
 def pathToBaseNanoporeDir():
@@ -74,16 +74,6 @@ def getFastaDictionary(fastaFile):
     #Hash of names to sequences
     return dict(map(lambda x : (x[0].split()[0], x[1]), fastaRead(open(fastaFile, 'r')))) 
 
-###TODO: Get rid of this method - uses too much memory
-def getFastqDictionary(fastqFile):
-    """Returns a dictionary of the first words of fastq headers to their corresponding 
-    fastq sequence
-    """
-    names = map(lambda x : x[0].split()[0], fastqRead(open(fastqFile, 'r')))
-    assert len(names) == len(set(names)) #Check all the names are unique
-    #Hash of names to sequences
-    return dict(map(lambda x : (x[0].split()[0], x[1]), fastqRead(open(fastqFile, 'r')))) 
-
 def makeFastaSequenceNamesUnique(inputFastaFile, outputFastaFile):
     """Makes a fasta file with unique names
     """
@@ -112,19 +102,6 @@ def makeFastqSequenceNamesUnique(inputFastqFile, outputFastqFile):
         fastqWrite(fileHandle, name, seq, quals)
     fileHandle.close()
     return outputFastqFile
-
-"""
-def normaliseQualValues(inputFastqFile, outputFastqFile):
-    """Makes a fastq with valid qual values
-    """
-    fileHandle = open(outputFastqFile, 'w')
-    for name, seq, quals in fastqRead(open(inputFastqFile, 'r')):
-        if quals == None:
-            quals = [33] * len(seq)
-        fastqWrite(fileHandle, name, seq, quals)
-    fileHandle.close()
-    return outputFastqFile
-"""
 
 def samIterator(sam):
     """Creates an iterator over the aligned reads in a sam file, filtering out

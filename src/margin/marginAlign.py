@@ -3,8 +3,8 @@ import sys
 from optparse import OptionParser
 from jobTree.src.bioio import logger, setLoggingFromOptions
 from jobTree.scriptTree.stack import Stack
-from margin.mappers.last import LastChain, LastRealign
-from margin.mappers.bwa import BwaChain, BwaRealign
+from margin.mappers.last import Last, LastChain, LastRealign
+from margin.mappers.bwa import Bwa, BwaChain, BwaRealign
 from margin.utils import pathToBaseNanoporeDir
 import cPecan.cPecanEm
 from cPecan.cPecanEm import addExpectationMaximisationOptions
@@ -22,6 +22,8 @@ def main():
     parser.add_option("--bwa", dest="bwa", help="Use BWA instead of LAST", 
                       default=False, action="store_true")
     parser.add_option("--noRealign", dest="noRealign", help="Don't run any realignment step", 
+                      default=False, action="store_true")
+    parser.add_option("--noChain", dest="noChain", help="Don't run any chaining step", 
                       default=False, action="store_true")
     parser.add_option("--gapGamma", dest="gapGamma", help="Set the gap gamma for the AMAP function", 
                       default=0.5, type=float)
@@ -67,7 +69,10 @@ def main():
     
     #Set the mapper
     if options.noRealign:
-        mapper = BwaChain if options.bwa else LastChain
+        if options.noChain:
+            mapper = BwaChain if options.bwa else LastChain
+        else:
+            mapper = Bwa if options.bwa else Last
     else:
         mapper = BwaRealign if options.bwa else LastRealign
     

@@ -41,10 +41,24 @@ class TestCase(unittest.TestCase):
         os.system("./marginAlign tests/reads.fq tests/reference.fa tests/test.sam --jobTree testJobTree")
         # Validate samfile
         self.validateSam("./tests/test.sam")
+        
+    def testMarginAlignNoChainRef(self):
+        print "\nRunning marginAlign for 1 reference, and a pre-trained model (no EM, no chain)"
+        os.system("./marginAlign tests/reads.fq tests/reference.fa tests/test.sam --jobTree testJobTree --noChain")
+        # Validate samfile
+        self.validateSam("./tests/test.sam")
 
     def testMarginAlignEm1Ref(self):
         print "\nRunning marginAlign for 1 reference, with EM and writing output.hmm"
         os.system("./marginAlign tests/reads.fq tests/reference.fa tests/test.sam --em --outputModel tests/output.hmm --jobTree testJobTree")
+        # Validate samfile
+        self.validateSam("./tests/test.sam")
+        # Check if output.hmm files were written
+        self.assertTrue(os.path.isfile("./tests/output.hmm"))
+    
+    def testMarginAlignEm1NoChainRef(self):
+        print "\nRunning marginAlign for 1 reference, with EM and writing output.hmm (no chain)"
+        os.system("./marginAlign tests/reads.fq tests/reference.fa tests/test.sam --em --noChain --outputModel tests/output.hmm --jobTree testJobTree")
         # Validate samfile
         self.validateSam("./tests/test.sam")
         # Check if output.hmm files were written

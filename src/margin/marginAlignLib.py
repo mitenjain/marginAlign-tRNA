@@ -38,7 +38,7 @@ def mergeChainedAlignedSegments(chainedAlignedSegments, refSequence, readSequenc
     #cAR.isize=0
     #cAR.qual = "<" * len(readSequence)
     #cAR.tags = aR.tags 
-    cAR.rnext = -1
+    cAR.next_reference_id = -1
     cAR.reference_start = aR.reference_start #Reference start
     cAR.is_reverse = aR.is_reverse
     cAR.query_sequence = reverseComplement(readSequence) if cAR.is_reverse else readSequence
@@ -94,12 +94,13 @@ def mergeChainedAlignedSegments(chainedAlignedSegments, refSequence, readSequenc
     #Check ops
     for op, length in cAR.cigar: #We should have no hard clipped ops
         assert op in (0, 1, 2, 4)
-    
-    #Check coordinates 
+     
+    #Reference sequence check coordinates
     assert sum([ length for op, length in cigarList if op in (0, 2)]) == cAR.reference_end - cAR.reference_start
     assert cAR.reference_start >= 0 and cAR.reference_start < len(refSequence)
     assert cAR.reference_end >= 0 and cAR.reference_end <= len(refSequence)
-    assert sum([ length for op, length in cigarList if op in (0, 1, 4)]) == len(readSequence)
+    
+    #Read sequence check coordinates
     assert cAR.query_alignment_start >= 0 and cAR.query_alignment_start < len(readSequence)
     assert cAR.query_alignment_end >= 0 and cAR.query_alignment_end <= len(readSequence)
     assert cAR.query_alignment_start + sum([ length for op, length in cigarList if op in (0, 1)]) == cAR.query_alignment_end
@@ -143,8 +144,8 @@ def chainFn(alignedSegments, refSeq, readSeq, scoreFn=\
                 alignedSegmentToScores[aR] = score + alignedSegmentToScores[aR2]
                 alignedSegmentPointers[aR] = aR2
     
-    #Now find highest scoring alignment
-    aR = sorted(alignedSegments, key=lambda aR : alignedSegmentToScores[aR])[-1]
+    #Now find highest scoring alignment 
+    aR = max(alignedSegments, key=lambda aR : alignedSegmentToScores[aR])
     
     #Construct chain of alignedSegments
     chain = [ aR ]
@@ -162,27 +163,31 @@ def chainSamFile(samFile, outputSamFile, readFastqFile, referenceFastaFile,
     """
     sam = pysam.Samfile(samFile, "r" )
     refSequences = getFastaDictionary(referenceFastaFile) #Hash of names to sequences
-    readSequences = getFastqDictionary(readFastqFile) #Hash of names to sequences
-    readsToAlignedSegments = {}
+    
+    alignmentsHash = {}
     for aR in samIterator(sam): #Iterate on the sam lines and put into buckets by read
-        if aR.query_name not in readSequences:
-            raise RuntimeError("Aligned read name: %s not in read sequences \
-            names: %s" % (aR.query_name, readSequences.keys()))
-        key = (aR.query_name,aR.reference_id)
-        if key not in readsToAlignedSegments:
-            readsToAlignedSegments[key] = []
-        readsToAlignedSegments[key].append(aR)
+        #This should be improved, because the whole sam file is being stored in memory
+        if aR.query_name not in alignmentsHash:
+            alignmentsHash[aR.query_name] = {}
+        if aR.reference_id not in alignmentsHash[aR.query_name]:
+            alignmentsHash[aR.query_name][aR.reference_id] = []
+        alignmentsHash[aR.query_name][aR.reference_id].append(aR)
+
     #Now write out the sam file
     outputSam = pysam.Samfile(outputSamFile, "wh", template=sam)
     
     #Chain together the reads
     chainedAlignedSegments = []
-    for readName, refID in readsToAlignedSegments.keys():
-        alignedSegments = readsToAlignedSegments[(readName, refID)]
-        refSeq = refSequences[sam.getrname(refID)]
-        readSeq = readSequences[readName]
-        chainedAlignedSegments.append(mergeChainedAlignedSegments(chainFn(alignedSegments, 
-                                                refSeq, readSeq), refSeq, readSeq))
+    for readName, readSeq, qualValues in fastqRead(readFastqFile):
+        readName = readName.split()[0] #Remove any white space from the name
+        if readName in alignmentsHash:
+            for refID in alignmentsHash[readName].keys():
+                alignedSegments = alignmentsHash[readName][refID]
+                refSeq = refSequences[sam.getrname(refID)]
+                chainedAlignedSegments.append(mergeChainedAlignedSegments(chainFn(alignedSegments, 
+                                              refSeq, readSeq), refSeq, readSeq))
+            alignmentsHash.pop(readName)
+    assert len(alignmentsHash) == 0 #All reads in the sam file should be in the input sequence file
         
     #Sort chained alignments by reference coordinates
     chainedAlignedSegments.sort(key=lambda aR : (aR.reference_start, aR.reference_end)) 
@@ -196,34 +201,17 @@ def learnModelFromSamFileTargetFn(target, samFile, readFastqFile,
                                   referenceFastaFile, options):
     """Does expectation maximisation on sam file to learn the hmm for the sam file.
     """
-    #Convert the read file to fasta
-    refSequences = getFastaDictionary(referenceFastaFile) #Hash of names to sequences
-    readSequences = getFastqDictionary(readFastqFile) #Hash of names to sequences
-    
-    reads = os.path.join(target.getGlobalTempDir(), "temp.fa")
-    fH = open(reads, 'w')
-    for name in readSequences.keys():
-        seq = readSequences[name]
-        fastaWrite(fH, name, seq)
-        #We write the reverse complements too, because some reads are aligned to it 
-        #and we're too lazy to do the coordinate transform
-        fastaWrite(fH, name + "_reverse", reverseComplement(seq))
-    fH.close()
-    
-    #Get cigars file
+    #Get cigars and reads fasta file
     cigars = os.path.join(target.getGlobalTempDir(), "temp.cigar")
-    fH = open(cigars, 'w')
+    fHCigars = open(cigars, 'w')
+    reads = os.path.join(target.getGlobalTempDir(), "temp.fa")
+    fHReads = open(reads, 'w')
     sam = pysam.Samfile(samFile, "r" )
-    for aR in sam: #Iterate on the sam lines realigning them in parallel            
-        assert len(aR.query_sequence) == len(readSequences[aR.query_name]) #Checks that length of read sequences agree
-        if aR.is_reverse: #Deal with reverse complements
-            assert aR.query_sequence.upper() == reverseComplement(readSequences[aR.query_name]).upper()
-            aR.query_name += "_reverse" #This references the reverse complement form of the string
-        else:
-            assert aR.query_sequence.upper() == readSequences[aR.query_name].upper() #Checks reads match
-            
-        fH.write(getExonerateCigarFormatString(aR, sam) + "\n")
-    fH.close()
+    for aR, counter in zip(sam, xrange(sys.maxint)): #Iterate on the sam lines realigning them in parallel            
+        aR.query_name = aR.query_name + "_%s" % counter
+        fHCigars.write(getExonerateCigarFormatString(aR, sam) + "\n")
+        fastaWrite(fHReads, aR.query_name, aR.seq)
+    fHCigars.close(); fHReads.close()
     
     unnormalisedOutputModel = os.path.join(target.getGlobalTempDir(), 
                                            "unnormalisedOutputModel.hmm")
@@ -279,20 +267,22 @@ def realignSamFileTargetFn(target, samFile, outputSamFile, readFastqFile,
     do it in parallel on a cluster.
     Optionally runs expectation maximisation.
     """
-    #Chain the sam file
-    tempSamFile = os.path.join(target.getGlobalTempDir(), "temp.sam")
-    chainSamFile(samFile, tempSamFile, readFastqFile, referenceFastaFile, chainFn)
+    #Optionally chain the sam file
+    if not options.noChain:
+        tempSamFile = os.path.join(target.getGlobalTempDir(), "temp.sam")
+        chainSamFile(samFile, tempSamFile, readFastqFile, referenceFastaFile, chainFn)
+        samFile = tempSamFile
     
     #If we do expectation maximisation we split here:
     if options.em:
-        target.addChildTargetFn(learnModelFromSamFileTargetFn, args=(tempSamFile, 
+        target.addChildTargetFn(learnModelFromSamFileTargetFn, args=(samFile, 
                                     readFastqFile, referenceFastaFile, options))
 
     options.hmmFile = options.outputModel if options.em else options.inputModel #This
     #setups the hmm to be used the realignment function
     
     target.setFollowOnTargetFn(paralleliseSamProcessingTargetFn, 
-                               args=(tempSamFile, 
+                               args=(samFile, 
                                      referenceFastaFile, outputSamFile, 
                                      realignCigarTargetFn, realignSamFile3TargetFn,
                                      options))
@@ -335,10 +325,6 @@ def realignSamFile3TargetFn(target, samFile, referenceFastaFile,
     for aR, pA in zip(samIterator(sam), cigarIterator()): #Iterate on the sam lines 
         #realigning them in parallel
         
-        #Check replacement cigar string covers the aligned portion of the read and reference
-        assert sum(map(lambda op : op.length if op.type in (0, 1) else 0, pA.operationList)) == aR.query_alignment_end - aR.qstart
-        assert sum(map(lambda op : op.length if op.type in (0, 2) else 0, pA.operationList)) == aR.reference_end - aR.reference_start
-        
         #Replace alignment by converting exonerate ops to aligned read ops,
         #adding soft clipping unaligned prefix and suffix of read
         ops = [ ]
@@ -348,9 +334,13 @@ def realignSamFile3TargetFn(target, samFile, referenceFastaFile,
         if aR.query_alignment_end < len(aR.query_sequence):
             ops.append((4, len(aR.query_sequence) - aR.query_alignment_end))
         
-        #Checks the final operation list is the correct length
+        #Checks the final operation list 
+        ##Correct for the read
         assert sum(map(lambda (type, length) : length if type in (0,1,4) else 0, ops)) == \
         sum(map(lambda (type, length) : length if type in (0,1,4) else 0, aR.cigar))
+        ##Correct for the reference
+        assert sum(map(lambda (type, length) : length if type in (0, 2) else 0, ops)) == \
+        aR.reference_end - aR.reference_start
         
         aR.cigar = tuple(ops)
         
