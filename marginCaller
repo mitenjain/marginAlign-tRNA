@@ -1,5 +1,8 @@
 #!/bin/bash
 
+set -e
+# Any subsequent(*) commands which fail will cause the shell script to exit immediately
+
 # Check if virtualenv has been created, and if it exists, activate it
 if [ -d "./env/bin/" ]; then
 	# Control will enter here if $DIRECTORY exists.
