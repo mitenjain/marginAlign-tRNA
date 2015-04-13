@@ -269,17 +269,25 @@ def realignSamFileTargetFn(target, samFile, outputSamFile, readFastqFile,
     """
     #Optionally chain the sam file
     if not options.noChain:
+        target.logToMaster("Going to chain sam file: %s" % samFile)
         tempSamFile = os.path.join(target.getGlobalTempDir(), "temp.sam")
         chainSamFile(samFile, tempSamFile, readFastqFile, referenceFastaFile, chainFn)
         samFile = tempSamFile
     
     #If we do expectation maximisation we split here:
     if options.em:
+        target.logToMaster("Going to run EM training with sam file: %s, read fastq file: %s, \
+        reference fasta file: %s" \
+                           % (samFile, readFastqFile, referenceFastaFile))
         target.addChildTargetFn(learnModelFromSamFileTargetFn, args=(samFile, 
                                     readFastqFile, referenceFastaFile, options))
 
     options.hmmFile = options.outputModel if options.em else options.inputModel #This
     #setups the hmm to be used the realignment function
+    
+    target.logToMaster("Going to realign sam file: %s to create output sam file: %s \
+    with match gamma %s and gap gamma %s and model %s" % (samFile, outputSamFile, 
+                options.gapGamma, options.matchGamma, options.hmmFile))
     
     target.setFollowOnTargetFn(paralleliseSamProcessingTargetFn, 
                                args=(samFile, 
@@ -350,3 +358,6 @@ def realignSamFile3TargetFn(target, samFile, referenceFastaFile,
     #Finish up
     sam.close()
     outputSam.close()
+    
+    target.logToMaster("Realigned sam file: %s to create output sam file: %s" % \
+                       (samFile, outputSamFile))

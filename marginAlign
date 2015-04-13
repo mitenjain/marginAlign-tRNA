@@ -3,16 +3,16 @@
 set -e
 # Any subsequent(*) commands which fail will cause the shell script to exit immediately
 
+#Get directory containing shell script
+BASEDIR=$(dirname $0)
+
 # Check if virtualenv has been created, and if it exists, activate it
-if [ -d "./env/bin/" ]; then
+if [ -d ${BASEDIR}/env/bin/ ]; then
 	# Control will enter here if $DIRECTORY exists.
-	source env/bin/activate
+	source ${BASEDIR}/env/bin/activate
 	# set a virtenv flag so it can be deactivated once done
 	virtenv=true
 fi
-
-#Get directory containing shell script
-BASEDIR=$(dirname $0)
 
 #Set the python path to just the relevant directories
 export PYTHONPATH=${BASEDIR}/src:${BASEDIR}/submodules
