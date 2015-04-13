@@ -9,7 +9,7 @@ BASEDIR=$(dirname $0)
 # Check if virtualenv has been created, and if it exists, activate it
 if [ -d ${BASEDIR}/env/bin/ ]; then
 	# Control will enter here if $DIRECTORY exists.
-	source env/bin/activate
+	source ${BASEDIR}/env/bin/activate
 	# set a virtenv flag so it can be deactivated once done
 	virtenv=true
 fi
