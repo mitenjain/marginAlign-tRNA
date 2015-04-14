@@ -334,13 +334,19 @@ def realignSamFile3TargetFn(target, samFile, referenceFastaFile,
         #realigning them in parallel
         
         #Replace alignment by converting exonerate ops to aligned read ops,
-        #adding soft clipping unaligned prefix and suffix of read
+        #adding soft clipping/hard clipping of unaligned prefix and suffix of read
         ops = [ ]
+        if len(aR.cigar) > 0 and aR.cigar[0][0] == 5:
+            ##Add any hard clipped prefix
+            ops.append(aR.cigar[0])
         if aR.query_alignment_start > 0:
             ops.append((4, aR.qstart))
         ops += map(lambda op : (op.type, op.length), pA.operationList)
         if aR.query_alignment_end < len(aR.query_sequence):
             ops.append((4, len(aR.query_sequence) - aR.query_alignment_end))
+        if len(aR.cigar) > 1 and aR.cigar[-1][0] == 5: 
+            ##Add any hard clipped suffix
+            ops.append(aR.cigar[-1])
         
         #Checks the final operation list 
         ##Correct for the read

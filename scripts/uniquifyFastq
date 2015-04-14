@@ -1,12 +1,20 @@
 #!/bin/bash
 
+#!/bin/bash
 set -e
+$(dirname $0)/executionScript.sh ${BASEDIR}/src/margin/marginAlign.py $@
+
+set -e
+#!/bin/bash
+set -e
+$(dirname $0)/scripts/executionScript.sh ${BASEDIR}/src/margin/marginAlign.py $@
+
 # Any subsequent(*) commands which fail will cause the shell script to exit immediately
 
 # Check if virtualenv has been created, and if it exists, activate it
-if [ -d "./env/bin/" ]; then
+if [ -d "../env/bin/" ]; then
 	# Control will enter here if $DIRECTORY exists.
-	source env/bin/activate
+	source ../env/bin/activate
 	# set a virtenv flag so it can be deactivated once done
 	virtenv=true
 fi

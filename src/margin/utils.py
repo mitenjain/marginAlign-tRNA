@@ -1,13 +1,13 @@
 import pysam, sys, os
 from jobTree.src.bioio import fastaRead, fastqRead, \
-cigarReadFromString,PairwiseAlignment, fastaWrite, fastqWrite, logger, absSymPath
+cigarReadFromString,PairwiseAlignment, fastaWrite, fastqWrite, logger, absSymPath, reverseComplement
 
 def pathToBaseNanoporeDir():
     """Returns path to base directory "marginAlign"
     """
     import marginAlign
     i = absSymPath(__file__)
-    return os.path.split(os.path.split(i)[0])[0]
+    return os.path.split(os.path.split(os.path.split(i)[0])[0])[0]
 
 def getFirstNonClippedPositionInRead(alignedSegment, readSeq):
     """Gets the coordinate of the first non-clipped position in the read relative to the 
@@ -180,3 +180,201 @@ def paralleliseSamProcessingTargetFn(target, samFile,
     #Finish up
     sam.close()
     
+###The following code is used by the tests/plots
+
+def getFastqDictionary(fastqFile):
+    """Returns a dictionary of the first words of fastq headers to their corresponding 
+    fastq sequence
+    """
+    names = map(lambda x : x[0].split()[0], fastqRead(open(fastqFile, 'r')))
+    assert len(names) == len(set(names)) #Check all the names are unique
+    #Hash of names to sequences
+    return dict(map(lambda x : (x[0].split()[0], x[1]), fastqRead(open(fastqFile, 'r')))) 
+
+class AlignedPair:
+    """Represents an aligned pair of positions using absolute reference/read coordinates.
+    
+    Originally coded when I was figuring out pySam, hence is full of assertions and uses
+    global coordinates.
+    """
+    def __init__(self, refPos, refSeq, readPos, isReversed, readSeq, pPair):
+        assert refPos >= 0 and refPos < len(refSeq)
+        self.refPos = refPos
+        self.refSeq = refSeq
+        assert readPos >= 0 and readPos < len(readSeq)
+        self.readPos = readPos
+        self.isReversed = isReversed
+        self.readSeq = readSeq
+        self.pPair = pPair #Pointer to the previous aligned pair
+        
+    def isMatch(self):
+        return self.getRefBase().upper() == self.getReadBase().upper() and \
+            self.getRefBase().upper() in "ACTG"
+    
+    def isMismatch(self):
+        return self.getRefBase().upper() != self.getReadBase().upper() and \
+            self.getRefBase().upper() in "ACTG" and self.getReadBase().upper() in "ACTG"
+    
+    def getRefBase(self):
+        return self.refSeq[self.refPos]
+    
+    def getReadBase(self):
+        if self.isReversed:
+            return reverseComplement(self.readSeq[self.readPos]) 
+        return self.readSeq[self.readPos]
+    
+    def getSignedReadPos(self):
+        if self.isReversed:
+            return -self.readPos
+        return self.readPos
+    
+    def getPrecedingReadInsertionLength(self, globalAlignment=False):
+        #If global alignment flag is true any unaligned prefix/suffix insertion at the beginning
+        #and end of the read sequence is interpreted as an insertion, rather than being ignored.
+        if self.pPair == None:
+            if globalAlignment:
+                if self.isReversed:
+                    assert len(self.readSeq) - self.readPos - 1 >= 0
+                    return len(self.readSeq) - self.readPos - 1
+                return self.readPos
+            return 0
+        return self._indelLength(self.readPos, self.pPair.readPos)
+    
+    def getPrecedingReadDeletionLength(self, globalAlignment=False):
+        if self.pPair == None:
+            if globalAlignment:
+                return self.refPos
+            return 0
+        return self._indelLength(self.refPos, self.pPair.refPos)
+    
+    @staticmethod
+    def _indelLength(pos, pPos):
+        length = abs(pPos - pos) - 1
+        assert length >= 0
+        return length
+
+    @staticmethod
+    def iterator(alignedSegment, refSeq, readSeq):
+        """Generates aligned pairs from a pysam.AlignedSegment object.
+        """
+        readOffset = getFirstNonClippedPositionInRead(alignedSegment, readSeq)
+        pPair = None
+        assert len(alignedSegment.query_sequence) <= len(readSeq)
+        for readPos, refPos in alignedSegment.aligned_pairs: #Iterate over the block
+            if readPos != None and refPos != None:
+                assert refPos >= alignedSegment.reference_start and refPos < alignedSegment.reference_end
+                if refPos >= len(refSeq): #This is masking an (apparently minor?) one 
+                    #off error in the BWA sam files?
+                    logger.critical("Detected an aligned reference position out of \
+                    bounds! Reference length: %s, reference coordinate: %s" % \
+                    (len(refSeq), refPos))
+                    continue
+                aP = AlignedPair(refPos, refSeq, abs(readOffset + readPos), 
+                                 alignedSegment.is_reverse, readSeq, pPair)
+                if aP.getReadBase().upper() != alignedSegment.query_alignment_sequence[readPos].upper():
+                    logger.critical("Detected a discrepancy between the absolute read \
+                    sequence and the aligned read sequence. Bases: %s %s, \
+                    read-position: %s, is reversed: %s, absolute read offset: %s, \
+                    length absolute read sequence %s, length aligned read sequence %s, \
+                    length aligned read sequence plus soft clipping %s, read name: %s, \
+                    cigar string %s" % (aP.getReadBase().upper(), 
+                                        alignedSegment.query_alignment_sequence[readPos].upper(), readPos, 
+                                        alignedSegment.is_reverse, readOffset, len(readSeq), 
+                                        len(alignedSegment.query_alignment_sequence), len(alignedSegment.query_sequence), 
+                                        alignedSegment.query_name, alignedSegment.cigarstring))
+                assert aP.getReadBase().upper() == alignedSegment.query_alignment_sequence[readPos].upper()
+                pPair = aP
+                yield aP 
+                
+class ReadAlignmentCoverageCounter:
+    """Counts coverage from a pairwise alignment.
+    Global alignment means the entire reference and read sequences (trailing indels).
+    """
+    def __init__(self, readSeq, refSeq, alignedRead, globalAlignment=False):
+        self.matches = 0
+        self.mismatches = 0
+        self.ns = 0
+        self.totalReadInsertionLength = 0
+        self.totalReadInsertions = 0
+        self.totalReadDeletionLength = 0
+        self.totalReadDeletions = 0
+        self.readSeq = readSeq
+        self.refSeq = refSeq
+        self.globalAlignment = globalAlignment
+        
+        #Now process the read alignment
+        totalReadInsertionLength, totalReadDeletionLength = 0, 0
+        aP = None
+        for aP in AlignedPair.iterator(alignedRead, self.refSeq, self.readSeq): 
+            if aP.isMatch():
+                self.matches += 1
+            elif aP.isMismatch():
+                self.mismatches += 1
+            else:
+                self.ns += 1
+            if aP.getPrecedingReadInsertionLength(self.globalAlignment) > 0:
+                self.totalReadInsertions += 1
+                totalReadInsertionLength += aP.getPrecedingReadInsertionLength(self.globalAlignment)
+            if aP.getPrecedingReadDeletionLength(self.globalAlignment) > 0:
+                self.totalReadDeletions += 1
+                totalReadDeletionLength += aP.getPrecedingReadDeletionLength(self.globalAlignment)
+        if self.globalAlignment and aP != None: #If global alignment account for any trailing indels
+            assert len(self.refSeq) - aP.refPos - 1 >= 0
+            if len(self.refSeq) - aP.refPos - 1 > 0:
+                self.totalReadDeletions += 1
+                self.totalReadDeletionLength += len(self.refSeq) - aP.refPos - 1
+
+            if alignedRead.is_reverse:
+                aP.readPos >= 0
+                if aP.readPos > 0:
+                    self.totalReadInsertions += 1
+                    totalReadInsertionLength += aP.readPos
+            else:
+                assert len(self.readSeq) - aP.readPos - 1 >= 0
+                if len(self.readSeq) - aP.readPos - 1 > 0:
+                    self.totalReadInsertions += 1
+                    totalReadInsertionLength += len(self.readSeq) - aP.readPos - 1
+
+        assert totalReadInsertionLength <= len(self.readSeq)
+        assert totalReadDeletionLength <= len(self.refSeq)
+        self.totalReadInsertionLength += totalReadInsertionLength
+        self.totalReadDeletionLength += totalReadDeletionLength
+    
+    @staticmethod
+    def formatRatio(numerator, denominator):
+        if denominator == 0:
+            return float("nan")
+        return float(numerator)/denominator
+            
+    def readCoverage(self):
+        return self.formatRatio(self.matches + self.mismatches, self.matches + self.mismatches + self.totalReadInsertionLength)
+    
+    def referenceCoverage(self):
+        return self.formatRatio(self.matches + self.mismatches, self.matches + self.mismatches + self.totalReadDeletionLength)
+    
+    def identity(self):
+        return self.formatRatio(self.matches, self.matches + self.mismatches + self.totalReadInsertionLength)
+    
+    def mismatchesPerReadBase(self):
+        return self.formatRatio(self.mismatches, self.matches + self.mismatches)
+    
+    def deletionsPerReadBase(self):
+        return self.formatRatio(self.totalReadDeletions, self.matches + self.mismatches)
+    
+    def insertionsPerReadBase(self):
+        return self.formatRatio(self.totalReadInsertions, self.matches + self.mismatches)
+    
+    def readLength(self):
+        return len(self.readSeq)
+
+def calculateIdentity(samFile, readFastqFile, referenceFastaFile, globalAlignment=True):
+    """Calculates the average read identity over the alignments in the sam file.
+    """
+    refSequences = getFastaDictionary(referenceFastaFile) #Hash of names to sequences
+    readSequences = getFastqDictionary(readFastqFile) #Hash of names to sequences
+    sam = pysam.Samfile(samFile, "r" )
+    readsToReadCoverages = {}
+    identities = map(lambda aR : ReadAlignmentCoverageCounter(readSequences[aR.qname], \
+        refSequences[sam.getrname(aR.rname)], aR, globalAlignment).identity(), sam)
+    sam.close()
+    return sum(identities)/len(identities)

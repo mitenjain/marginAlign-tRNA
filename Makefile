@@ -2,7 +2,7 @@ all :
 	cd submodules && make all
 	
 test : all
-	python tests/tests.py
+	scripts/executionScript.sh ./tests/tests.py --logInfo
 
 clean :
 	cd submodules && make clean

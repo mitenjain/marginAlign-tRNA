@@ -17,10 +17,10 @@ def main():
     alignments, rather use the input alignment to call the variants (this will be much faster)", 
                       default=False, action="store_true")
     parser.add_option("--alignmentModel", default=os.path.join(pathToBaseNanoporeDir(), 
-                                                          "margin", "mappers", "last_hmm_20.txt"), 
+                                                          "src", "margin", "mappers", "last_hmm_20.txt"), 
                      help="The model to use in realigning the reads to the reference.")
     parser.add_option("--errorModel", default=os.path.join(pathToBaseNanoporeDir(), 
-                                                          "margin", "mappers", "last_hmm_20.txt"), 
+                                                          "src", "margin", "mappers", "last_hmm_20.txt"), 
                      help="The model to use in calculating the difference between the predicted true reference and the reads.")
     parser.add_option("--maxAlignmentLengthPerJob", default=7000000, 
                      help="Maximum total alignment length of alignments to include in one posterior prob calculation job.", 

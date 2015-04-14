@@ -32,7 +32,7 @@ def main():
     
     #Add the cPecan expectation maximisation options
     options = cPecan.cPecanEm.Options()
-    options.inputModel = os.path.join(pathToBaseNanoporeDir(), "margin", "mappers", "last_hmm_20.txt")
+    options.inputModel = os.path.join(pathToBaseNanoporeDir(), "src", "margin", "mappers", "last_hmm_20.txt")
     options.modelType="fiveStateAsymmetric" #"threeStateAsymmetric"
     options.optionsToRealign="--diagonalExpansion=10 --splitMatrixBiggerThanThis=300" 
     options.randomStart = True
