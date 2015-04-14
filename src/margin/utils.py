@@ -375,6 +375,6 @@ def calculateIdentity(samFile, readFastqFile, referenceFastaFile, globalAlignmen
     sam = pysam.Samfile(samFile, "r" )
     readsToReadCoverages = {}
     identities = map(lambda aR : ReadAlignmentCoverageCounter(readSequences[aR.qname], \
-        refSequences[sam.getrname(aR.rname)], aR, globalAlignment).identity(), sam)
+        refSequences[sam.getrname(aR.rname)], aR, globalAlignment).identity(), samIterator(sam))
     sam.close()
     return sum(identities)/len(identities)
