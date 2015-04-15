@@ -25,6 +25,7 @@ class TestCase(unittest.TestCase):
         self.inputHmmFile = self.getFile("tests/input.hmm")
         self.outputHmmFile = self.getFile("tests/output.hmm")
         self.inputSamFile1 = self.getFile("tests/input.sam")
+        self.knownMutationsFile = self.getFile("tests/knownMutatations.txt")
         self.outputVcfFile = self.getFile("tests/output.vcf")
         self.jobTree = self.getFile("tests/testJobTree")
         unittest.TestCase.setUp(self)
@@ -48,7 +49,7 @@ class TestCase(unittest.TestCase):
         return ReadAlignmentStats.getReadAlignmentStats(samFile, readFastqFile, 
                                                         referenceFastaFile, globalAlignment=True)
     
-    def validateVcf(self, vcfFile, referenceFastaFile, knownMutations):
+    def validateVcf(self, vcfFile, referenceFastaFile, knownMutationsFile):
         ###TODO!
         return 0.0, 0.0
     
@@ -107,21 +108,24 @@ class TestCase(unittest.TestCase):
     
     #The following tests marginCaller
     
-    def runMarginCaller(self, samFile, referenceFastaFile, args=""):
+    def runMarginCaller(self, samFile, referenceFastaFile, knownMutationsFile, args=""):
         startTime = time.time()
         system("\t".join([ self.marginCaller, samFile, referenceFastaFile,
                          self.outputVcfFile, "--jobTree=%s" % self.jobTree, args ]))
         runTime = time.time() - startTime
-        precision, recall = self.validateVcf(self.outputVcfFile, referenceFastaFile)
+        precision, recall = self.validateVcf(self.outputVcfFile, 
+                                             referenceFastaFile, knownMutationsFile)
         logger.info("Ran marginCaller with args: %s, with reference: %s and sam: %s. \
         Got: %s precision, Got: %s recall, Took: %s seconds" % \
                     (args, samFile, referenceFastaFile, precision, recall, runTime))
 
     def testMarginCallerDefaults(self):
-        self.runMarginCaller(self.inputSamFile1, self.referenceFastaFile1)
+        self.runMarginCaller(self.inputSamFile1, self.referenceFastaFile1, 
+                             self.knownMutationsFile)
         
     def testMarginCallerNoMargin(self):
-        self.runMarginCaller(self.inputSamFile1, self.referenceFastaFile1, "--noMargin")
+        self.runMarginCaller(self.inputSamFile1, self.referenceFastaFile1, 
+                             self.knownMutationsFile, "--noMargin")
     
     #This runs margin stats (just to ensure it runs without falling over)
      
