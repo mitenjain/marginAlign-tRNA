@@ -8,9 +8,6 @@ from margin.utils import makeFastaSequenceNamesUnique, makeFastqSequenceNamesUni
 ##################################################################################
 
 def main(myCommandLine=None):
-    # starting time
-    t0 = time.time()
-
     #Parse the inputs args/options
     parser = OptionParser(usage="usage: inputFastqFile outputFastqFile", 
                           version="%prog 0.1")
@@ -23,8 +20,6 @@ def main(myCommandLine=None):
         raise RuntimeError("Expected two arguments, got: %s" % " ".join(args))
  
     makeFastqSequenceNamesUnique(args[0], args[1])
-
-    print >> sys.stderr, "\n", "Total time for the program %.3f" % (time.time()-t0), "s"
 
 if (__name__ == "__main__"):
     main()

@@ -1,2 +1,0 @@
-#!/bin/bash
-$(dirname $0)/scripts/executionScript.sh $(dirname $0)/scripts/plots.py $@

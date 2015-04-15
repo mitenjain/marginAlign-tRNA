@@ -286,8 +286,8 @@ class AlignedPair:
                 pPair = aP
                 yield aP 
                 
-class ReadAlignmentCoverageCounter:
-    """Counts coverage from a pairwise alignment.
+class ReadAlignmentStats:
+    """Calculates stats of a given read alignment.
     Global alignment means the entire reference and read sequences (trailing indels).
     """
     def __init__(self, readSeq, refSeq, alignedRead, globalAlignment=False):
@@ -355,7 +355,7 @@ class ReadAlignmentCoverageCounter:
     def identity(self):
         return self.formatRatio(self.matches, self.matches + self.mismatches + self.totalReadInsertionLength)
     
-    def mismatchesPerReadBase(self):
+    def mismatchesPerAlignedBase(self):
         return self.formatRatio(self.mismatches, self.matches + self.mismatches)
     
     def deletionsPerReadBase(self):
@@ -366,15 +366,16 @@ class ReadAlignmentCoverageCounter:
     
     def readLength(self):
         return len(self.readSeq)
-
-def calculateIdentity(samFile, readFastqFile, referenceFastaFile, globalAlignment=True):
-    """Calculates the average read identity over the alignments in the sam file.
-    """
-    refSequences = getFastaDictionary(referenceFastaFile) #Hash of names to sequences
-    readSequences = getFastqDictionary(readFastqFile) #Hash of names to sequences
-    sam = pysam.Samfile(samFile, "r" )
-    readsToReadCoverages = {}
-    identities = map(lambda aR : ReadAlignmentCoverageCounter(readSequences[aR.qname], \
-        refSequences[sam.getrname(aR.rname)], aR, globalAlignment).identity(), samIterator(sam))
-    sam.close()
-    return sum(identities)/len(identities)
+    
+    @staticmethod
+    def getReadAlignmentStats(samFile, readFastqFile, referenceFastaFile, globalAlignment=True):
+        """Gets a list of ReadAlignmentStats objects, one for each alignment in the same file
+        """
+        refSequences = getFastaDictionary(referenceFastaFile) #Hash of names to sequences
+        readSequences = getFastqDictionary(readFastqFile) #Hash of names to sequences
+        sam = pysam.Samfile(samFile, "r" )
+        readsToReadCoverages = {}
+        readAlignmentStats = map(lambda aR : ReadAlignmentStats(readSequences[aR.qname], \
+            refSequences[sam.getrname(aR.rname)], aR, globalAlignment), samIterator(sam))
+        sam.close()
+        return readAlignmentStats
