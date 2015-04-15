@@ -67,7 +67,7 @@ def main():
     samFile, readFastqFile, referenceFastaFile = args
     
     readAlignmentStats = ReadAlignmentStats.getReadAlignmentStats(samFile, readFastqFile, 
-                                             referenceFastaFile, globalAlignment=True)
+                                             referenceFastaFile, globalAlignment=not options.localAlignment)
     
     def report(values, statisticName):
         if not options.noStats:

@@ -69,10 +69,10 @@ def getFastaDictionary(fastaFile):
     """Returns a dictionary of the first words of fasta headers to their corresponding 
     fasta sequence
     """
-    names = map(lambda x : x[0].split()[0], fastaRead(open(fastaFile, 'r')))
-    assert len(names) == len(set(names)) #Check all the names in the sequence file are unique
-    #Hash of names to sequences
-    return dict(map(lambda x : (x[0].split()[0], x[1]), fastaRead(open(fastaFile, 'r')))) 
+    namesAndSequences = map(lambda x : (x[0].split()[0], x[1]), fastaRead(open(fastaFile, 'r')))
+    names = map(lambda x : x[0], namesAndSequences)
+    assert len(names) == len(set(names)) #Check all the names are unique
+    return dict(namesAndSequences) #Hash of names to sequences
 
 def makeFastaSequenceNamesUnique(inputFastaFile, outputFastaFile):
     """Makes a fasta file with unique names
@@ -186,10 +186,10 @@ def getFastqDictionary(fastqFile):
     """Returns a dictionary of the first words of fastq headers to their corresponding 
     fastq sequence
     """
-    names = map(lambda x : x[0].split()[0], fastqRead(open(fastqFile, 'r')))
+    namesAndSequences = map(lambda x : (x[0].split()[0], x[1]), fastqRead(open(fastqFile, 'r')))
+    names = map(lambda x : x[0], namesAndSequences)
     assert len(names) == len(set(names)) #Check all the names are unique
-    #Hash of names to sequences
-    return dict(map(lambda x : (x[0].split()[0], x[1]), fastqRead(open(fastqFile, 'r')))) 
+    return dict(namesAndSequences) #Hash of names to sequences
 
 class AlignedPair:
     """Represents an aligned pair of positions using absolute reference/read coordinates.
@@ -206,14 +206,15 @@ class AlignedPair:
         self.isReversed = isReversed
         self.readSeq = readSeq
         self.pPair = pPair #Pointer to the previous aligned pair
+        self.bases = set([ 'A', 'C', 'G', 'T' ])
         
     def isMatch(self):
         return self.getRefBase().upper() == self.getReadBase().upper() and \
-            self.getRefBase().upper() in "ACTG"
+            self.getRefBase().upper() in self.bases
     
     def isMismatch(self):
         return self.getRefBase().upper() != self.getReadBase().upper() and \
-            self.getRefBase().upper() in "ACTG" and self.getReadBase().upper() in "ACTG"
+            self.getRefBase().upper() in self.bases and self.getReadBase().upper() in self.bases
     
     def getRefBase(self):
         return self.refSeq[self.refPos]
@@ -282,7 +283,7 @@ class AlignedPair:
                                         alignedSegment.is_reverse, readOffset, len(readSeq), 
                                         len(alignedSegment.query_alignment_sequence), len(alignedSegment.query_sequence), 
                                         alignedSegment.query_name, alignedSegment.cigarstring))
-                assert aP.getReadBase().upper() == alignedSegment.query_alignment_sequence[readPos].upper()
+
                 pPair = aP
                 yield aP 
                 
