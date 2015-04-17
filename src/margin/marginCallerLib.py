@@ -140,7 +140,7 @@ def VCFWriter(referenceFastaFile, refSequences, sortedvariantCallsHash, outputVc
             ref = refBase
             qual = "."
             filter = "PASS"
-            fmt = "."
+            fmt = ""
             alt = "."
             info = "."
             if refPosition in sortedvariantCallsHash[refSeqName].keys():
