@@ -1,6 +1,6 @@
-import pysam, sys, os
+import pysam, sys, os, random
 from jobTree.src.bioio import fastaRead, fastqRead, \
-cigarReadFromString,PairwiseAlignment, fastaWrite, fastqWrite, logger, absSymPath, reverseComplement
+cigarReadFromString,PairwiseAlignment, fastaWrite, fastqWrite, logger, absSymPath, reverseComplementChar
 
 def pathToBaseNanoporeDir():
     """Returns path to base directory "marginAlign"
@@ -221,7 +221,7 @@ class AlignedPair:
     
     def getReadBase(self):
         if self.isReversed:
-            return reverseComplement(self.readSeq[self.readPos]) 
+            return reverseComplementChar(self.readSeq[self.readPos]) 
         return self.readSeq[self.readPos]
     
     def getSignedReadPos(self):
@@ -374,9 +374,37 @@ class ReadAlignmentStats:
         """
         refSequences = getFastaDictionary(referenceFastaFile) #Hash of names to sequences
         readSequences = getFastqDictionary(readFastqFile) #Hash of names to sequences
-        sam = pysam.Samfile(samFile, "r" )
+        sam = pysam.Samfile(samFile, "r")
         readsToReadCoverages = {}
         readAlignmentStats = map(lambda aR : ReadAlignmentStats(readSequences[aR.qname], \
             refSequences[sam.getrname(aR.rname)], aR, globalAlignment), samIterator(sam))
         sam.close()
         return readAlignmentStats
+    
+##Functions used in the creation of mutations - used in the testing of margin-caller
+
+def mutateSequence(sequence, snpRate): #Does not preserve softmasking
+    """Returns sequence with snpRate proportion of sites mutated and a list of those mutations
+    """
+    mutations = []
+    mutatedSequence = list(sequence)
+    for i in xrange(len(sequence)):
+        if random.random() < snpRate:
+            base = sequence[i]
+            altBase = random.choice(list(set(("A", 'C', 'G', 'T')) - set(base.upper())))
+            altBase = altBase if base.upper() == base else altBase.lower()
+            mutations.append((i, altBase))
+            mutatedSequence[i] = altBase
+    return "".join(mutatedSequence), mutations
+
+def mutateSequences(sequences, snpRate):
+    """As mutateSequence, but for collection of sequences. Sequences is a dictionary 
+    of sequences of names to sequences. Return value is a dictionary of names to mutated
+    sequences and a list of those mutations, represented as triples of (sequenceName, position, alt).
+    """
+    mutatedSequences = {}; allMutations = [] #List of refSequenceName, position, altBase
+    for name in sequences.keys():
+        mutatedSequence, mutations = mutateSequence(sequences[name], snpRate)
+        mutatedSequences[name] = mutatedSequence
+        allMutations += map(lambda x : (name, x[0], x[1]), mutations) 
+    return mutatedSequences, allMutations
