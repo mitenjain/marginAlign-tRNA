@@ -52,13 +52,15 @@ def posteriorProbabilityCalculationTargetFn(target, exonerateCigarStringFile,
         #Now collate the reference position expectations
         for refPosition, queryPosition, posteriorProb in \
         map(lambda x : map(float, x.split()), open(tempPosteriorProbsFile, 'r')):
+            assert posteriorProb <= 1.01
+            assert posteriorProb >= 0.0
             key = (referenceSequenceName, int(refPosition))
             if key not in expectationsOfBasesAtEachPosition:
                 expectationsOfBasesAtEachPosition[key] = dict(zip(BASES, [0.0]*len(BASES)))
             queryBase = querySequence[int(queryPosition)].upper()
             if queryBase in BASES: #Could be an N or other wildcard character, which we ignore
                 expectationsOfBasesAtEachPosition[key][queryBase] += posteriorProb
-    
+            
     #Pickle the posterior probs
     fileHandle = open(outputPosteriorProbsFile, 'w')
     cPickle.dump(expectationsOfBasesAtEachPosition, fileHandle, cPickle.HIGHEST_PROTOCOL)
@@ -94,22 +96,21 @@ def getNullSubstitutionMatrix():
     """
     return dict(zip(product(BASES, BASES), [1.0]*len(BASES)**2))
 
-def variantCallSorter(variantCalls):
-    # Sort variantCalls
-    sortedvariantCalls = sorted(variantCalls, key=lambda i: (int(i[1])))
-    sortedvariantCallsHash = {}
-    for refSeqName, refPosition, base, posteriorProb in sortedvariantCalls:
-        if not refSeqName in sortedvariantCallsHash: #
-            sortedvariantCallsHash[refSeqName] = {}
-        if not refPosition in sortedvariantCallsHash[refSeqName]:
-            sortedvariantCallsHash[refSeqName][refPosition] = []
-        sortedvariantCallsHash[refSeqName][refPosition].append([base, posteriorProb])
-    return sortedvariantCallsHash
+def vcfRead(vcfFile):
+    vcfCalls = set()
+    for x in vcf.Reader(open(vcfFile, 'r')):
+        for alt in x.ALT:
+            vcfCalls.add((x.CHROM, int(x.POS), str(alt).upper()))
+    return vcfCalls
 
-def VCFWriter(referenceFastaFile, refSequences, sortedvariantCallsHash, outputVcfFile):
-    # Create vcf format records, and write to vcf
-    # This is a generic vcf to mimic vcf file structure. I will create a better version of this code in a few days
-    vcfRecords = []
+def vcfWrite(referenceFastaFile, refSequences, variantCalls, outputVcfFile):
+    #Organise the variant calls
+    variantCallsHash = dict(map(lambda x : (x, {}), refSequences))
+    for refSeqName, refPosition, base, posteriorProb in variantCalls:
+        if not refPosition in variantCallsHash[refSeqName]:
+            variantCallsHash[refSeqName][refPosition] = []
+        variantCallsHash[refSeqName][refPosition].append((base, posteriorProb))
+    
     # For each call write out a VCF line representing the output
     vcfFile = open(outputVcfFile, "w")
     vcfFile.write("##fileformat=VCFv4.2\n")
@@ -143,19 +144,20 @@ def VCFWriter(referenceFastaFile, refSequences, sortedvariantCallsHash, outputVc
             fmt = ""
             alt = "."
             info = "."
-            if refPosition in sortedvariantCallsHash[refSeqName].keys():
+            
+            if refPosition in variantCallsHash[refSeqName].keys():
                 variant = []
                 posteriorProb = []
-                for variantCall in sortedvariantCallsHash[refSeqName][refPosition]:
+                for variantCall in variantCallsHash[refSeqName][refPosition]:
                     variant.append(variantCall[0])
                     posteriorProb.append(str(variantCall[1]))
                 alt = ",".join(variant)
                 info = ",".join(posteriorProb)
-            # _Record(chrom, pos, ID, ref, alt, qual, filt, info, fmt, self._sample_indexes)
-            Record = refSeqName + "\t" + pos + "\t" + id + "\t" + ref + "\t" + alt + "\t" + qual + "\t" + filter + "\t" + info + "\t" + fmt
-            vcfRecords.append(Record)
-            vcfFile.write(Record)
-            vcfFile.write("\n")
+                # _Record(chrom, pos, ID, ref, alt, qual, filt, info, fmt, self._sample_indexes)
+                Record = refSeqName + "\t" + pos + "\t" + id + "\t" + ref + "\t" + \
+                alt + "\t" + qual + "\t" + filter + "\t" + info + "\t" + fmt
+                vcfFile.write(Record)
+                vcfFile.write("\n")
     vcfFile.close()
 
 def variantCallSamFileTargetFn(target, samFile, referenceFastaFile, 
@@ -195,6 +197,7 @@ def variantCallSamFileTargetFn(target, samFile, referenceFastaFile,
         expectations = expectationsOfBasesAtEachPosition[(refSeqName, refPosition)]
         totalExpectation = sum(expectations.values())
         assert totalExpectation > 0 
+        
         #This is the calculation of the posterior probability
         posteriorProbs = calcBasePosteriorProbs(dict(zip(BASES, map(lambda x : float(expectations[x])/totalExpectation, BASES))), refBase, 
                                                 evolutionarySubstitutionMatrix, errorSubstitutionMatrix)                          
@@ -202,8 +205,10 @@ def variantCallSamFileTargetFn(target, samFile, referenceFastaFile,
             if base != refBase and posteriorProbs[base] >= options.threshold:
                 variantCalls.append((refSeqName, refPosition, base, posteriorProbs[base]))
 
-    # Sort variantCalls
-    sortedvariantCallsHash = variantCallSorter(variantCalls)
-
     # Write to VCF (this is a generic function that mimics VCF format)
-    VCFWriter(referenceFastaFile, refSequences, sortedvariantCallsHash, outputVcfFile)
+    vcfWrite(referenceFastaFile, refSequences, variantCalls, outputVcfFile)
+    
+    #Quick test of vcfWrite/Read
+    vcfCalls = vcfRead(outputVcfFile)
+    calls = set(map(lambda x : (x[0], x[1]+1, x[2]), variantCalls))
+    assert vcfCalls == calls

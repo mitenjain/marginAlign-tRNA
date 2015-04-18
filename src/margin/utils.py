@@ -174,7 +174,6 @@ def paralleliseSamProcessingTargetFn(target, samFile,
         refName = sam.getrname(aR.reference_id)
             
     makeChild()
-    
     target.setFollowOnTargetFn(followOnTargetFn, args=(samFile, referenceFastaFile, \
                                                        outputFile, tempOutputFiles, options))
     #Finish up
@@ -393,7 +392,7 @@ def mutateSequence(sequence, snpRate): #Does not preserve softmasking
             base = sequence[i]
             altBase = random.choice(list(set(("A", 'C', 'G', 'T')) - set(base.upper())))
             altBase = altBase if base.upper() == base else altBase.lower()
-            mutations.append((i, altBase))
+            mutations.append((i, base, altBase))
             mutatedSequence[i] = altBase
     return "".join(mutatedSequence), mutations
 
@@ -406,5 +405,5 @@ def mutateSequences(sequences, snpRate):
     for name in sequences.keys():
         mutatedSequence, mutations = mutateSequence(sequences[name], snpRate)
         mutatedSequences[name] = mutatedSequence
-        allMutations += map(lambda x : (name, x[0], x[1]), mutations) 
+        allMutations += map(lambda x : (name, x[0], x[1], x[2]), mutations) 
     return mutatedSequences, allMutations

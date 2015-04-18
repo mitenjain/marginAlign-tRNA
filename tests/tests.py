@@ -1,6 +1,7 @@
 import unittest
 import time
 import os, sys, numpy, pysam
+from margin.marginCallerLib import vcfRead
 from margin.utils import ReadAlignmentStats, pathToBaseNanoporeDir, getFastaDictionary
 from cPecan.cPecanEm import Hmm
 from sonLib.bioio import system, parseSuiteTestOptions, logger, getBasicOptionParser
@@ -21,14 +22,18 @@ class TestCase(unittest.TestCase):
         self.readFastqFile1 = self.getFile("tests/reads.fq") if longTests else \
         self.getFile("tests/lessReads.fq")
         self.referenceFastaFile1 = self.getFile("tests/references.fa")
-        self.mutatedReferenceFastaFile1 = self.getFile("tests/referencesMutated.fa")
         self.outputSamFile = self.getFile("tests/test.sam")
         self.inputHmmFile = self.getFile("tests/input.hmm")
         self.outputHmmFile = self.getFile("tests/output.hmm")
         self.inputSamFile1 = self.getFile("tests/input.sam")
-        self.mutationsFile = self.getFile("tests/mutations.txt")
         self.outputVcfFile = self.getFile("tests/output.vcf")
         self.jobTree = self.getFile("tests/testJobTree")
+        
+        #For testing margin caller
+        self.mutationsFile = self.getFile("tests/mutations.txt")
+        self.mutatedReferenceFastaFile = self.getFile("tests/referencesMutated.fa")
+        self.inputSamFileForMutatedReferenceFile = self.getFile("tests/inputBigMutations.sam") #This is aligned against the mutated reference
+        
         unittest.TestCase.setUp(self)
 
     def getFile(self, file):
@@ -51,18 +56,22 @@ class TestCase(unittest.TestCase):
                                                         referenceFastaFile, globalAlignment=True)
     
     def validateVcf(self, vcfFile, referenceFastaFile, mutationsFile):
-        #Load mutations
-        mutations = set(map(lambda x : (x[0], int(x[1]), x[2]), \
-map(lambda x : x.split(), open(mutationsFile, 'r')))) #Set of triples each of from
-        #reference sequence-name, position and mutated base
         #Load reference sequences
         referenceSequences = getFastaDictionary(referenceFastaFile)
+        #Load mutations
+        mutations = set(map(lambda x : (x[0], int(x[1])+1, x[2]), \
+                            map(lambda x : x.split(), open(mutationsFile, 'r'))))
         #Load VCF mutations
-        observedMutations = set(map(lambda x : (x.CHROM, x.POS, x.ALT), vcf.Reader(open(vcfFile, 'r')))) 
+        imputedMutations = vcfRead(vcfFile)
+            
+        #print "Known mutations", sorted(list(mutations))
+        #print "Imputed mutations", sorted(list(imputedMutations))
+        
         #Compare mutation sets
-        intersectionSize = float(len(mutations.intersection(observedMutations)))
-        return intersectionSize/len(observedMutations) if len(observedMutations) else 0.0, \
-    intersectionSize/len(mutations) if len(mutations) else 0.0 #Return intersection size
+        intersectionSize = float(len(mutations.intersection(imputedMutations)))
+        #Return precision, recall, number of mutations called, number of known mutations 
+        return intersectionSize/len(imputedMutations) if len(imputedMutations) else 0.0, \
+    intersectionSize/len(mutations) if len(mutations) else 0.0, len(imputedMutations), len(mutations) 
     
     def checkHmm(self, hmmFile):
         Hmm.loadHmm(hmmFile) #This performs a bunch of internal consistency checks 
@@ -123,22 +132,27 @@ map(lambda x : x.split(), open(mutationsFile, 'r')))) #Set of triples each of fr
         system("\t".join([ self.marginCaller, samFile, referenceFastaFile,
                          self.outputVcfFile, "--jobTree=%s" % self.jobTree, args ]))
         runTime = time.time() - startTime
-        precision, recall = self.validateVcf(self.outputVcfFile, 
+        precision, recall, numberOfCalls, numberOfKnownMutations = self.validateVcf(self.outputVcfFile, 
                                              referenceFastaFile, mutationsFile)
         logger.info("Ran marginCaller with args: %s, with reference: %s and sam: %s. \
-        Got: %s precision, Got: %s recall, Took: %s seconds" % \
-                    (args, samFile, referenceFastaFile, precision, recall, runTime))
+        Got: %s precision, Got: %s recall, Number of calls: %s, Number of known mutations: %s,\
+        Took: %s seconds" % \
+                    (args, samFile, referenceFastaFile, 
+                     precision, recall, 
+                     numberOfCalls, numberOfKnownMutations,
+                     runTime))
 
     def testMarginCallerDefaults(self):
-        self.runMarginCaller(self.inputSamFile1, self.referenceFastaFile1, 
+        self.runMarginCaller(self.inputSamFileForMutatedReferenceFile, 
+                             self.mutatedReferenceFastaFile,
                              self.mutationsFile)
-        
+    
     def testMarginCallerNoMargin(self):
-        self.runMarginCaller(self.inputSamFile1, self.referenceFastaFile1, 
+        self.runMarginCaller(self.inputSamFileForMutatedReferenceFile, 
+                             self.mutatedReferenceFastaFile,
                              self.mutationsFile, "--noMargin")
     
     #This runs margin stats (just to ensure it runs without falling over)
-    
      
     def testMarginStats(self):
         system("%s %s %s %s --identity --mismatchesPerAlignedBase --readCoverage \

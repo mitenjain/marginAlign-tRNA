@@ -190,7 +190,8 @@ def chainSamFile(samFile, outputSamFile, readFastqFile, referenceFastaFile,
     assert len(alignmentsHash) == 0 #All reads in the sam file should be in the input sequence file
         
     #Sort chained alignments by reference coordinates
-    chainedAlignedSegments.sort(key=lambda aR : (aR.reference_start, aR.reference_end)) 
+    chainedAlignedSegments.sort(key=lambda aR : (sam.getrname(aR.reference_id), \
+                                                 aR.reference_start, aR.reference_end)) 
     
     for cAR in chainedAlignedSegments:
         outputSam.write(cAR)

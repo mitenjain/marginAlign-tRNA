@@ -1,6 +1,6 @@
 The marginAlign package can be used to align reads to a reference genome and call single nucleotide variations (SNVs). It is specifically tailored for Oxford Nanopore Reads.
 
-The package comes with two programs: marginAlign, a short read aligner, and marginCaller, a program to call single nucleotide variations.
+The package comes with three programs: marginAlign, a read aligner, marginCaller, a program to call single nucleotide variations, and marginStats, a program to call 
 
 ### Requirements
 * git
@@ -21,7 +21,7 @@ of the package. Place these binaries on your path if you wish to use them withou
 path on the filesystem.
 
 ### Creating a virtual environment to handle python dependencies
-marginAlign uses numpy and pysam. The system python could be used if these dependencies are present. Otherwise, a virtual environment can be created by running the following command in the margin base directory:
+marginAlign uses numpy, pysam and PyVcf (see requirements.txt for versions used). The system python could be used if these dependencies are present. Otherwise, a virtual environment can be created by running the following command in the margin base directory:
 
     virtualenv --no-site-packages --distribute env && source env/bin/activate && pip install -r requirements.txt
 
@@ -43,7 +43,7 @@ To update a marginAlign installation, from the base directory type:
     make
     #If you're using virtualenv run the following command to update the python dependencies:
     virtualenv --no-site-packages --distribute env && source env/bin/activate && pip install -r requirements.txt
-
+    
 
 ### jobTree
 
@@ -65,7 +65,7 @@ To align a FASTQ file ("input.fastq") to a reference fasta file ("reference.fast
 
     marginAlign input.fastq reference.fasta output.sam --jobTree ./jobTree
 
-After executing the "./jobTree" directory should be deleted.
+After executing the "./jobTree" directory should be deleted. This directory contains details of the run - it must be deleted before starting a new run that uses the same jobTree directory.
 
 To enable EM training do, putting the trained model file in "output.hmm" do:
 
