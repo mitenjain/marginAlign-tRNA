@@ -33,6 +33,8 @@ class TestCase(unittest.TestCase):
         self.mutationsFile = self.getFile("tests/mutations.txt")
         self.mutatedReferenceFastaFile = self.getFile("tests/referencesMutated.fa")
         self.inputSamFileForMutatedReferenceFile = self.getFile("tests/inputBigMutations.sam") #This is aligned against the mutated reference
+        self.inputSamFileForMutatedReferenceFileLast = self.getFile("tests/inputBigMutationsLast.sam") 
+        self.inputSamFileForMutatedReferenceFileBwa = self.getFile("tests/inputBigMutationsBwa.sam") 
         
         unittest.TestCase.setUp(self)
 
@@ -96,6 +98,7 @@ class TestCase(unittest.TestCase):
                      deletionsPerReadBase, runTime))
     
     ###The following functions test marginAlign
+    
     def testMarginAlignDefaults(self):
         self.runMarginAlign(self.readFastqFile1, self.referenceFastaFile1)
     
@@ -151,6 +154,32 @@ class TestCase(unittest.TestCase):
         self.runMarginCaller(self.inputSamFileForMutatedReferenceFile, 
                              self.mutatedReferenceFastaFile,
                              self.mutationsFile, "--noMargin")
+    
+    def testMarginCallerNoMarginLast(self):
+        self.runMarginCaller(self.inputSamFileForMutatedReferenceFileLast, 
+                             self.mutatedReferenceFastaFile,
+                             self.mutationsFile)
+    
+    def testMarginCallerNoMarginBwa(self):
+        self.runMarginCaller(self.inputSamFileForMutatedReferenceFileBwa, 
+                             self.mutatedReferenceFastaFile,
+                             self.mutationsFile)
+        
+    def testMarginCallerNoMarginLastNoMargin(self):
+        self.runMarginCaller(self.inputSamFileForMutatedReferenceFileLast, 
+                             self.mutatedReferenceFastaFile,
+                             self.mutationsFile, "--noMargin")
+    
+    def testMarginCallerNoMarginBwaNoMargin(self):
+        self.runMarginCaller(self.inputSamFileForMutatedReferenceFileBwa, 
+                             self.mutatedReferenceFastaFile,
+                             self.mutationsFile, "--noMargin")
+    
+    #Full integrative test that runs EM to train a model, then uses the resulting
+    #model and alignment to calculate SNPs
+    
+    
+    
     
     #This runs margin stats (just to ensure it runs without falling over)
      

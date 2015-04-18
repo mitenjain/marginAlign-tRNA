@@ -14,7 +14,7 @@ def main():
     
     #Options
     parser.add_option("--noMargin", dest="noMargin", help="Do not marginalise over the read \
-    alignments, rather use the input alignment to call the variants (this will be much faster)", 
+    alignments, rather use the input alignment to call the variants (this will be faster)", 
                       default=False, action="store_true")
     parser.add_option("--alignmentModel", default=os.path.join(pathToBaseNanoporeDir(), 
                                                           "src", "margin", "mappers", "last_hmm_20.txt"), 
