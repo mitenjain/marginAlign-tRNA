@@ -165,7 +165,7 @@ def main(myCommandLine=None):
     t0 = time.time()
 
     #Parse the inputs args/options
-    parser = OptionParser(usage="usage: inputSam/BamFile outputDir hubTag -r \
+    parser = OptionParser(usage="usage: inputSam/BamFile outputDir hubTag \
                                  referenceFastaFile", version="%prog 0.1")
 
     #Parse the options/arguments
@@ -180,7 +180,7 @@ def main(myCommandLine=None):
     hubTag = args[2]
     referenceFastaFile = args[3]
     
-    print samFile, outputDir, hubTag, referenceFastaFile
+    print >> sys.stderr, samFile, outputDir, hubTag, referenceFastaFile
 
     CustomTrackAssemblyHub(samFile, outputDir, hubTag, referenceFastaFile)
 
