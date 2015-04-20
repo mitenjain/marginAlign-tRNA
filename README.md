@@ -93,7 +93,7 @@ To NOT marginalise over the read alignments do (this will just use the existing 
 
 To calculate the median/avg/min/max identity of reads in a sam file do:
     
-    marginAlign input.sam read.fastq reference.fasta --identity
+    marginStats input.sam read.fastq reference.fasta --identity
 
 Other flags (see help) can be used to calculate other stats.
 
