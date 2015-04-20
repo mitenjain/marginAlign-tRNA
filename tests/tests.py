@@ -8,7 +8,7 @@ from sonLib.bioio import system, parseSuiteTestOptions, logger, getBasicOptionPa
 import vcf
 import numpy
 
-"""Basic system level tests for marginAlign and marginCaller scripts.
+"""Basic system level tests for marginAlign, marginCaller and marginStats scripts.
 """
 
 longTests = False
@@ -18,6 +18,7 @@ class TestCase(unittest.TestCase):
         self.marginAlign = self.getFile("marginAlign") #Path to marginAlign binary
         self.marginCaller = self.getFile("marginCaller") #Path to marginCall binary
         self.marginStats = self.getFile("marginStats") #Path to marginStats binary
+        self.modifyHmm = self.getFile("scripts/modifyHmm")
         #The following are files used
         self.readFastqFile1 = self.getFile("tests/reads.fq") if longTests else \
         self.getFile("tests/lessReads.fq")
@@ -35,6 +36,7 @@ class TestCase(unittest.TestCase):
         self.inputSamFileForMutatedReferenceFile = self.getFile("tests/inputBigMutations.sam") #This is aligned against the mutated reference
         self.inputSamFileForMutatedReferenceFileLast = self.getFile("tests/inputBigMutationsLast.sam") 
         self.inputSamFileForMutatedReferenceFileBwa = self.getFile("tests/inputBigMutationsBwa.sam") 
+        self.readFastqFile2 = self.getFile("tests/reads.fq")
         
         unittest.TestCase.setUp(self)
 
@@ -96,6 +98,7 @@ class TestCase(unittest.TestCase):
                     (args, readFastqFile, referenceFastaFile, identity, 
                      mismatchesPerAlignedBase, insertionsPerReadBase,
                      deletionsPerReadBase, runTime))
+        system("rm -rf %s" % self.jobTree)
     
     ###The following functions test marginAlign
     
@@ -139,12 +142,10 @@ class TestCase(unittest.TestCase):
                                              referenceFastaFile, mutationsFile)
         logger.info("Ran marginCaller with args: %s, with reference: %s and sam: %s. \
         Got: %s precision, Got: %s recall, Number of calls: %s, Number of known mutations: %s,\
-        Took: %s seconds" % \
-                    (args, samFile, referenceFastaFile, 
-                     precision, recall, 
-                     numberOfCalls, numberOfKnownMutations,
-                     runTime))
-
+        Took: %s seconds" % (args, samFile, referenceFastaFile, precision, recall, 
+                             numberOfCalls, numberOfKnownMutations, runTime))
+        system("rm -rf %s" % self.jobTree)
+    
     def testMarginCallerDefaults(self):
         self.runMarginCaller(self.inputSamFileForMutatedReferenceFile, 
                              self.mutatedReferenceFastaFile,
@@ -154,7 +155,7 @@ class TestCase(unittest.TestCase):
         self.runMarginCaller(self.inputSamFileForMutatedReferenceFile, 
                              self.mutatedReferenceFastaFile,
                              self.mutationsFile, "--noMargin")
-    
+        
     def testMarginCallerNoMarginLast(self):
         self.runMarginCaller(self.inputSamFileForMutatedReferenceFileLast, 
                              self.mutatedReferenceFastaFile,
@@ -178,11 +179,29 @@ class TestCase(unittest.TestCase):
     #Full integrative test that runs EM to train a model, then uses the resulting
     #model and alignment to calculate SNPs
     
-    
-    
+    def testMarginAlignAndCallerTogether(self):
+        if longTests:
+            #This will run margin-align to get the output-model
+            self.runMarginAlign(self.readFastqFile2, self.mutatedReferenceFastaFile, \
+                                args="--em --outputModel %s" % self.outputHmmFile)
+            #Establish the accuracy of the alignment
+            self.runMarginCaller(self.outputSamFile, 
+                                 self.mutatedReferenceFastaFile,
+                                 self.mutationsFile, "--noMargin")
+            #Establish the accuracy of the model before modification
+            self.runMarginCaller(self.outputSamFile, 
+                                 self.mutatedReferenceFastaFile,
+                                 self.mutationsFile, "--alignmentModel=%s --errorModel=%s" % 
+                                 (self.outputHmmFile, self.outputHmmFile))
+            #Modify the HMM to make it more tolerant other substitutions / normalise the GC content / simplify emission probs
+            system("%s %s %s --gcContent=0.5 --substitutionRate=0.2 --setFlatIndelEmissions" % (self.modifyHmm, self.outputHmmFile, self.outputHmmFile))
+            #Establish the accuracy of the model after modification
+            self.runMarginCaller(self.outputSamFile, 
+                                 self.mutatedReferenceFastaFile,
+                                 self.mutationsFile, "--alignmentModel=%s --errorModel=%s" % 
+                                 (self.outputHmmFile, self.outputHmmFile))
     
     #This runs margin stats (just to ensure it runs without falling over)
-     
     def testMarginStats(self):
         system("%s %s %s %s --identity --mismatchesPerAlignedBase --readCoverage \
         --deletionsPerReadBase --insertionsPerReadBase --printValuePerReadAlignment" % \

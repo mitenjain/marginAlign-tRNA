@@ -1,6 +1,6 @@
 The marginAlign package can be used to align reads to a reference genome and call single nucleotide variations (SNVs). It is specifically tailored for Oxford Nanopore Reads.
 
-The package comes with three programs: marginAlign, a read aligner, marginCaller, a program to call single nucleotide variations, and marginStats, a program to call 
+The package comes with three programs: marginAlign, a read aligner, marginCaller, a program to call single nucleotide variations, and marginStats, a program to compute simple qc stats on a sam file (alignment identity, coverage, insertion and deletion rates).
 
 ### Requirements
 * git
@@ -16,7 +16,7 @@ To install the code run:
     git submodule update --init
     make
 
-This will build the code. Two executables: "marginAlign" and "marginCaller" are in the base directory
+This will build the code. Three executables: "marginAlign", "marginCaller" and "marginStats" are in the base directory
 of the package. Place these binaries on your path if you wish to use them without referring to their absolute
 path on the filesystem.
 
@@ -89,10 +89,12 @@ To NOT marginalise over the read alignments do (this will just use the existing 
 
     marginCaller input.sam reference.fa output.vcf --noMargin --jobTree ./jobTree
 
-### Utilities
+### Running marginStats
 
-To get coverage plots for samfiles use:
+To calculate the median/avg/min/max identity of reads in a sam file do:
     
-    ./plots input.fastq reference.fasta input.sam
+    marginAlign input.sam read.fastq reference.fasta --identity
 
-### Citing marginAlign/marginCaller
+Other flags (see help) can be used to calculate other stats.
+
+### Citing marginAlign/marginCaller/marginStats
