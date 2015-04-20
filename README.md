@@ -10,7 +10,7 @@ The package comes with three programs: marginAlign, a read aligner, marginCaller
 ### Installation
 To install the code run:
 
-    git clone git://github.com/benedictpaten/margin.git
+    git clone git://github.com/benedictpaten/marginAlign.git
     cd marginAlign
     git pull
     git submodule update --init
