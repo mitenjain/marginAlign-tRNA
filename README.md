@@ -98,3 +98,10 @@ To calculate the median/avg/min/max identity of reads in a sam file do:
 Other flags (see help) can be used to calculate other stats.
 
 ### Citing marginAlign/marginCaller/marginStats
+
+Please cite margin align as:
+
+    "Nat Methods. 2015 Apr;12(4):351-6. doi: 10.1038/nmeth.3290. Epub 2015 Feb 16.
+    Improved data analysis for the MinION nanopore sequencer.
+    Jain M1, Fiddes IT1, Miga KH1, Olsen HE1, Paten B1, Akeson M1."
+
