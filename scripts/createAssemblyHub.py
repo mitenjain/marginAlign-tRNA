@@ -172,8 +172,8 @@ def main(myCommandLine=None):
     options, args = parser.parse_args()
 
     #Exit if the arguments are not what we expect
-    if len(args) < 4:
-        raise RuntimeError("Expected three arguments, got: %s" % " ".join(args))
+    if len(args) != 4:
+        raise RuntimeError("Expected four arguments, got: %s" % " ".join(args))
 
     samFile = args[0]
     outputDir = args[1]
