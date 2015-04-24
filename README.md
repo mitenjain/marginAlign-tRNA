@@ -65,15 +65,23 @@ To align a FASTQ file ("input.fastq") to a reference fasta file ("reference.fast
 
     marginAlign input.fastq reference.fasta output.sam --jobTree ./jobTree
 
-After executing the "./jobTree" directory should be deleted. This directory contains details of the run - it must be deleted before starting a new run that uses the same jobTree directory.
+After executing the "./jobTree" directory should be deleted. This directory contains details of the run - it must be deleted before starting a new run that uses the same jobTree directory. See the jobTree help for more details.
 
 To enable EM training do, putting the trained model file in "output.hmm" do:
 
     marginAlign input.fastq reference.fasta output.sam --em --outputModel output.hmm --jobTree ./jobTree
+    
+The resulting output.sam alignment will be aligned with the learned model. To make the EM faster you can reduce the amount of alignments considered in the expectation step using the "--maxAlignmentLengthToSample" option. The default is a maximum of 50 million aligned bases, reducing it to 10 million is probably safe. You can also experiment with reducing the number of iterations of EM from the default of 100 to 75, which is generally enough to get some convergence. 
 
-To use a different model to the default one do:
+To use a model you've trained with another input file do:
 
     marginAlign input.fastq reference.fasta output.sam --inputModel input.hmm --jobTree ./jobTree
+
+Once the model is trained it can be useful to "normalise" it. The following runs the modifyHmm script to convert the "input.hmm" model to a normalised version, output in "output.hmm":
+
+    modifyHmm input.hmm output.hmm --substitutionRate=0.1 --gcContent=0.5
+    
+The substitutionRate parameter relaxes the model to expect a 10% substitution rate between the reference being aligned to and the actual sample being sequenced. Though heuristic, we've found a 10-20% rate improves the sensitivity of the model for calling substitutions with marginCaller - presumably because it makes the alignment model more tolerant of substitutions between the read and the reference. The gcContent parameter can be used to adjust the substitution parameters by the expected gc content, as a fraction from 0 to 1. 
 
 marginAlign expects the headers in the FASTQ file to be unique. Alternatively, a FASTQ file with unique headers can be created using the uniquifyFastq utility. To use uniquifyFastq do:
 
@@ -85,14 +93,22 @@ To call single nucleotide variations from an existing alignment ("input.sam") sa
 
     marginCaller input.sam reference.fa output.vcf --jobTree ./jobTree
 
+By default marginCaller only reports substitutions with a posterior base probability of 0.3 or greater. This can be adjusted by setting the --threshold parameter. Note, given the simple model used, it is possible to get multiple substitutions called at a site, if two non-reference bases both have posterior probability greater than 0.3. marginCaller does not currently report reference base probs - this will be added when I get a chance to play with the model a bit.
+
 To NOT marginalise over the read alignments do (this will just use the existing alignment, and will be much quicker):
 
     marginCaller input.sam reference.fa output.vcf --noMargin --jobTree ./jobTree
+    
+To use a trained model "model.hmm" (see marginAlign) do:
+
+    marginCaller input.sam reference.fa output.vcf --jobTree ./jobTree --alignmentModel=model.hmm --errorModel=model.hmm
+
+This will use the model.hmm file in both generating the posterior alignment probabilities (--alignmentModel), and then in generating the posterior base probabilities (--errorModel). 
 
 ### Running marginStats
 
 To calculate the median/avg/min/max identity of reads in a sam file do:
-    
+
     marginStats input.sam read.fastq reference.fasta --identity
 
 Other flags (see help) can be used to calculate other stats.
@@ -105,3 +121,4 @@ Please cite margin align as:
     Improved data analysis for the MinION nanopore sequencer.
     Jain M1, Fiddes IT1, Miga KH1, Olsen HE1, Paten B1, Akeson M1."
 
+This paper contains a description of the algorithms used in marginAlign.
