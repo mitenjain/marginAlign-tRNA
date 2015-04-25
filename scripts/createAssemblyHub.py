@@ -66,15 +66,15 @@ def CustomTrackAssemblyHub(samFile, outputDir, hubTag, referenceFastaFile):
     pysam.index(sortedbamFile + ".bam")
 
 
-    genomes = open(parentFolder + "/genomes.txt", "w")
+    genomes = open(os.path.join(parentFolder, "genomes.txt"), "w")
     if referenceFastaFile.endswith(".fa") or referenceFastaFile.endswith(".fasta"):
-        header = referenceFastaFile.split("/")[-1].split(".fa")[0]
+        header = os.path.split(referenceFastaFile)[-1].split(".fa")[0]
         system("cp %s %s" % (referenceFastaFile, parentFolder + header + "/"))
 
         # Create 2bit referenceFastaFile
-        oldreferenceFastaFile = referenceFastaFile.split("/")[-1]
-        newreferenceFastaFile = parentFolder + header + "/" + oldreferenceFastaFile
-        ref2bit = newreferenceFastaFile.split(".fa")[0] + ".2bit"
+        oldreferenceFastaFile = os.path.split(referenceFastaFile)[-1]
+        newreferenceFastaFile = os.path.join(parentFolder, header, oldreferenceFastaFile)
+        ref2bit = os.path.join(parentFolder, header, os.path.split(referenceFastaFile)[-1].split(".fa")[0] + ".2bit")
         system("./scripts/faToTwoBit %s %s" % (newreferenceFastaFile, ref2bit))
         
         # Get reference length for coordinates
@@ -95,9 +95,9 @@ def CustomTrackAssemblyHub(samFile, outputDir, hubTag, referenceFastaFile):
         genomes.write("\n")
     
     track_label = 1
-    tracks = open(outFolderReferenceFiles + "/trackDb.txt", "w")
-    label = samFile.split("/")[-1]
-    readType = samFile.split("/")[-1]
+    tracks = open(os.path.join(outFolderReferenceFiles, "trackDb.txt"), "w")
+    label = os.path.split(samFile)[-1]
+    readType = os.path.split(samFile)[-1]
     tracks.write("track " + str(track_label) + "_\n")
     tracks.write("longLabel " + readType + "\n")
     shortLabel = readType
@@ -107,7 +107,7 @@ def CustomTrackAssemblyHub(samFile, outputDir, hubTag, referenceFastaFile):
     tracks.write("colorByStrand 150,100,30 230,170,40\n")
     tracks.write("color 150,100,30\n")
     tracks.write("altColor 230,170,40\n")
-    tracks.write("bigDataUrl bamFiles/" + samFile.split("/")[-1].split(".sam")[0] + ".sorted.bam\n")
+    tracks.write("bigDataUrl bamFiles/" + os.path.split(samFile)[-1].split(".sam")[0] + ".sorted.bam\n")
     tracks.write("type bam\n")
     tracks.write("group " + readType + "\n")
     tracks.write("html assembly\n\n")
@@ -116,7 +116,7 @@ def CustomTrackAssemblyHub(samFile, outputDir, hubTag, referenceFastaFile):
 
     genomes.close()
 
-    groups = open(parentFolder + "/groups.txt", "w")
+    groups = open(os.path.join(parentFolder, "groups.txt"), "w")
     groups.write("name samFile\n")
     groups.write("label readType\n")
     groups.write("priority 1\n")
@@ -124,7 +124,7 @@ def CustomTrackAssemblyHub(samFile, outputDir, hubTag, referenceFastaFile):
     groups.close()
     
     
-    hubFile = open(parentFolder + "/hub.txt", "w")
+    hubFile = open(os.path.join(parentFolder, "hub.txt"), "w")
     hubFile.write("hub marginAlignHub\n")
     hubFile.write("shortLabel " + samFile + "\n")
     hubFile.write("longLabel marginAlign Assembly Hub from UCSC Nanopore Group\n")
