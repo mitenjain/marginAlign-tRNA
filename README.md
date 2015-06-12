@@ -32,7 +32,7 @@ To test the installation run:
 
     make test
     
-This will run demo sequences through marginAlign and marginVar.
+This will run demo sequences through marginAlign and marginCaller.
     
 ### Updating the installation
 To update a marginAlign installation, from the base directory type:
