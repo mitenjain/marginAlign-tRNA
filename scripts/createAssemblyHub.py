@@ -76,24 +76,24 @@ def CustomTrackAssemblyHub(samFile, outputDir, hubTag, referenceFastaFile):
         newreferenceFastaFile = os.path.join(parentFolder, header, oldreferenceFastaFile)
         ref2bit = os.path.join(parentFolder, header, os.path.split(referenceFastaFile)[-1].split(".fa")[0] + ".2bit")
         system("./scripts/faToTwoBit %s %s" % (newreferenceFastaFile, ref2bit))
-        
-        # Get reference length for coordinates
+
+        # Get reference length for coordinates, and add each reference per referenceFastaFile to genomes.txt
         fastaFile = open(newreferenceFastaFile, "r")
         for seq in Fastaseq.readline(fastaFile):
             id = seq.id.split(" ")[0].replace(">", "")
             coord = len(seq.seq)
-        fastaFile.close()
         
-        # Fasta referenceFastaFile name without .fasta
-        genomes.write("genome " + header + "\n")
-        genomes.write("trackDb " + header + "/trackDb.txt\n")
-        genomes.write("groups groups.txt\n")
-        genomes.write("description " + header + "\n")
-        genomes.write("twoBitPath " + header + "/" + header + ".2bit\n")
-        genomes.write("organism " + header + "\n")
-        genomes.write("defaultPos " + id + ":1-" + str(coord) + "\n")
-        genomes.write("\n")
-    
+            # Fasta referenceFastaFile name without .fasta
+            genomes.write("genome " + id + "\n")
+            genomes.write("trackDb " + header + "/trackDb.txt\n")
+            genomes.write("groups groups.txt\n")
+            genomes.write("description " + header + " " + id + "\n")
+            genomes.write("twoBitPath " + header + "/" + header + ".2bit\n")
+            genomes.write("organism " + id + "\n")
+            genomes.write("defaultPos " + id + ":1-" + str(coord) + "\n")
+            genomes.write("\n")
+        fastaFile.close()
+
     track_label = 1
     tracks = open(os.path.join(outFolderReferenceFiles, "trackDb.txt"), "w")
     label = os.path.split(samFile)[-1]
