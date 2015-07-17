@@ -312,7 +312,7 @@ def realignCigarTargetFn(target, exonerateCigarStringFile, referenceSequenceName
         fastaWrite(tempReadFile, querySequenceName, querySequence)
         #Call to cPecanRealign
         loadHmm = nameValue("loadHmm", options.hmmFile)
-        system("echo %s | cPecanRealign %s %s --diagonalExpansion=10 \
+        system("echo \"%s\" | cPecanRealign %s %s --diagonalExpansion=10 \
         --splitMatrixBiggerThanThis=3000 %s --gapGamma=%s --matchGamma=%s >> %s" % \
                (exonerateCigarString[:-1], tempRefFile, tempReadFile, loadHmm, 
                 options.gapGamma, options.matchGamma, outputCigarFile))
