@@ -165,8 +165,7 @@ def main(myCommandLine=None):
     t0 = time.time()
 
     #Parse the inputs args/options
-    parser = OptionParser(usage="usage: inputSam/BamFile outputDir hubTag \
-                                 referenceFastaFile", version="%prog 0.1")
+    parser = OptionParser(usage="usage: inputSam/BamFile outputDir hubTag referenceFastaFile", version="%prog 0.1")
 
     #Parse the options/arguments
     options, args = parser.parse_args()
