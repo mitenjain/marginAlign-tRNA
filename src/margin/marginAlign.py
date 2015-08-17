@@ -70,10 +70,10 @@ def main():
     
     #Set the mapper
     if options.noRealign:
-        if options.noChain:
-            mapper = BwaChain if options.bwa else LastChain
-        else:
+        if options.noChain: # i.e. --noChain --noRealign
             mapper = Bwa if options.bwa else Last
+        else: # i.e. --noRealign
+            mapper = BwaChain if options.bwa else LastChain
     else:
         mapper = BwaRealign if options.bwa else LastRealign
     
