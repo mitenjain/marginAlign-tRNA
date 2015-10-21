@@ -1,2 +1,2 @@
 #!/bin/bash
-$(dirname $0)/../src/executionScript.sh $(dirname $0)/../subModules/cPecan/cPecanModifyHmm.py $@
+$(dirname $0)/../src/executionScript.sh $(dirname $0)/../submodules/cPecan/cPecanModifyHmm.py $@
