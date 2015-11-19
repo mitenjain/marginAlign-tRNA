@@ -170,6 +170,11 @@ def main(myCommandLine=None):
     #Parse the options/arguments
     options, args = parser.parse_args()
 
+    #Print help message if no input
+    if len(sys.argv) == 1:
+        parser.print_help()
+        sys.exit(0)
+
     #Exit if the arguments are not what we expect
     if len(args) != 4:
         raise RuntimeError("Expected four arguments, got: %s" % " ".join(args))
