@@ -46,12 +46,12 @@ def posteriorProbabilityCalculationTargetFn(target, exonerateCigarStringFile,
         tempPosteriorProbsFile = os.path.join(target.getLocalTempDir(), "posteriorProbs.txt")
         if options.noMargin: #When we don't marginialize we just run cPecanRealign to get the list of aligned pairs
             #This runtime should be very fast
-            system("echo %s | cPecanRealign %s %s --diagonalExpansion=0 \
+            system("echo \"%s\" | cPecanRealign %s %s --diagonalExpansion=0 \
             --splitMatrixBiggerThanThis=1 --rescoreOriginalAlignment --outputPosteriorProbs=%s" % \
                        (exonerateCigarString[:-1], tempRefFile, tempReadFile, 
                         tempPosteriorProbsFile))
         else:
-            system("echo %s | cPecanRealign %s %s --diagonalExpansion=10 \
+            system("echo \"%s\" | cPecanRealign %s %s --diagonalExpansion=10 \
             --splitMatrixBiggerThanThis=100 --outputAllPosteriorProbs=%s --loadHmm=%s" % \
                        (exonerateCigarString[:-1], tempRefFile, tempReadFile, 
                         tempPosteriorProbsFile, options.alignmentModel))
