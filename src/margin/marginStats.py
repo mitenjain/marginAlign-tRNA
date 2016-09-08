@@ -34,6 +34,10 @@ def main():
                       help="Print insertions per base of alignments", 
                       default=False, action="store_true")
     
+    parser.add_option("--readLength", dest="readLength", 
+                      help="Print read lengths of aligned reads", 
+                      default=False, action="store_true")
+
     parser.add_option("--localAlignment", dest="localAlignment", 
                       help="Ignore unaligned prefix and suffix of each read in making calculation", 
                       default=False, action="store_true")
@@ -92,6 +96,9 @@ def main():
     
     if options.insertionsPerReadBase:
         report(map(lambda rAS : rAS.insertionsPerReadBase(), readAlignmentStats), "InsertionsPerReadBase")
+
+    if options.readLength:
+        report(map(lambda rAS : rAS.readLength(), readAlignmentStats), "ReadLength")
 
 if __name__ == '__main__':
     main()
