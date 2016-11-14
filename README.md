@@ -47,7 +47,7 @@ To update a marginAlign installation, from the base directory type:
 
 ### jobTree
 
-Both marginAlign and marginVar are [jobTree](https://github.com/benedictpaten/jobTree) scripts. This allows you to parallelise the execution of the scripts either using a single multi-processor machine or a cluster. The most important thing to note is that a jobTree script creates a "jobTree", a directory of files that manages the running of the job. As a result both scripts take a --jobTree DIRECTORY argument (by default "jobTree" in the current working directory if not specified). This directory should not exist prior to executing the script. It will be not be deleted after the script has finished (as it can be used to interogate the details of a run), and should be manually deleted.
+Both marginAlign and marginCaller are [jobTree](https://github.com/benedictpaten/jobTree) scripts. This allows you to parallelise the execution of the scripts either using a single multi-processor machine or a cluster. The most important thing to note is that a jobTree script creates a "jobTree", a directory of files that manages the running of the job. As a result both scripts take a --jobTree DIRECTORY argument (by default "jobTree" in the current working directory if not specified). This directory should not exist prior to executing the script. It will be not be deleted after the script has finished (as it can be used to interogate the details of a run), and should be manually deleted.
 
 To speed up either marginAlign or marginCaller on a single machine you can set the "--maxThreads" option. By default maxThreads=4.
 
