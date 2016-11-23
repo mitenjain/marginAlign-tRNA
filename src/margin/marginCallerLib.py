@@ -138,7 +138,8 @@ def vcfWrite(referenceFastaFile, refSequences, variantCalls, outputVcfFile):
 #    vcfFile.write("##FORMAT=<ID=GQ,Number=1,Type=Integer,Description=Genotype Quality>\n")
 #    vcfFile.write("##FORMAT=<ID=DP,Number=1,Type=Integer,Description=Read Depth>\n")
 #    vcfFile.write("##FORMAT=<ID=HQ,Number=2,Type=Integer,Description=Haplotype Quality>\n")
-    vcfFile.write("#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\n")
+#    vcfFile.write("#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\tFORMAT\n")
+    vcfFile.write("#CHROM\tPOS\tID\tREF\tALT\tQUAL\tFILTER\tINFO\n")
     # iterate through records now
     for refSeqName in refSequences:
         for refPosition, refBase in enumerate(refSequences[refSeqName]):
@@ -148,7 +149,7 @@ def vcfWrite(referenceFastaFile, refSequences, variantCalls, outputVcfFile):
             ref = refBase
             qual = "."
             filter = "PASS"
-            fmt = ""
+            #fmt = ""
             alt = "."
             info = "."
             
@@ -162,7 +163,7 @@ def vcfWrite(referenceFastaFile, refSequences, variantCalls, outputVcfFile):
                 info = ",".join(posteriorProb)
                 # _Record(chrom, pos, ID, ref, alt, qual, filt, info, fmt, self._sample_indexes)
                 Record = refSeqName + "\t" + pos + "\t" + id + "\t" + ref + "\t" + \
-                alt + "\t" + qual + "\t" + filter + "\t" + info + "\t" + fmt
+                alt + "\t" + qual + "\t" + filter + "\t" + info #+ "\t" + fmt
                 vcfFile.write(Record)
                 vcfFile.write("\n")
     vcfFile.close()
