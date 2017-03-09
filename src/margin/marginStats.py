@@ -14,8 +14,12 @@ def main():
                           version="%prog 0.1")
     
     #Options
-    parser.add_option("--identity", dest="identity", 
-                      help="Print identity of alignments", 
+    parser.add_option("--readIdentity", dest="readIdentity", 
+                      help="Print readIdentity of alignments", 
+                      default=False, action="store_true")
+    
+    parser.add_option("--alignmentIdentity", dest="alignmentIdentity", 
+                      help="Print alignmentIdentity", 
                       default=False, action="store_true")
     
     parser.add_option("--readCoverage", dest="readCoverage", 
@@ -82,8 +86,11 @@ def main():
         if options.printValuePerReadAlignment:
             print "Values" + statisticName, "\t".join(map(str, values))
     
-    if options.identity:
-        report(map(lambda rAS : rAS.identity(), readAlignmentStats), "Identity")
+    if options.readIdentity:
+        report(map(lambda rAS : rAS.readIdentity(), readAlignmentStats), "ReadIdentity")
+    
+    if options.alignmentIdentity:
+        report(map(lambda rAS : rAS.alignmentIdentity(), readAlignmentStats), "AlignmentIdentity")
     
     if options.readCoverage:
         report(map(lambda rAS : rAS.readCoverage(), readAlignmentStats), "ReadCoverage")

@@ -352,9 +352,12 @@ class ReadAlignmentStats:
     def referenceCoverage(self):
         return self.formatRatio(self.matches + self.mismatches, self.matches + self.mismatches + self.totalReadDeletionLength)
     
-    def identity(self):
+    def readIdentity(self):
         return self.formatRatio(self.matches, self.matches + self.mismatches + self.totalReadInsertionLength)
     
+    def alignmentIdentity(self):
+        return self.formatRatio(self.matches, self.matches + self.mismatches + self.totalReadInsertionLength + self.totalReadDeletionLength)
+
     def mismatchesPerAlignedBase(self):
         return self.formatRatio(self.mismatches, self.matches + self.mismatches)
     
