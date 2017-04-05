@@ -87,7 +87,8 @@ class TestCase(unittest.TestCase):
         runTime = time.time() - startTime
         readAlignmentStats = self.validateSam(self.outputSamFile, readFastqFile, referenceFastaFile)
         #Get some stats to print
-        identity = numpy.average(map(lambda rAS : rAS.identity(), readAlignmentStats))
+        readIdentity = numpy.average(map(lambda rAS : rAS.readIdentity(), readAlignmentStats))
+        alignmentIdentity = numpy.average(map(lambda rAS : rAS.alignmentIdentity(), readAlignmentStats))
         mismatchesPerAlignedBase = numpy.average(map(lambda rAS : rAS.mismatchesPerAlignedBase(), readAlignmentStats))
         insertionsPerReadBase = numpy.average(map(lambda rAS : rAS.insertionsPerReadBase(), readAlignmentStats))
         deletionsPerReadBase = numpy.average(map(lambda rAS : rAS.deletionsPerReadBase(), readAlignmentStats))
@@ -95,7 +96,7 @@ class TestCase(unittest.TestCase):
         logger.info("Ran marginAlign with args: %s, with reference: %s and reads: %s. \
         Got identity: %s, Mismatches per aligned base: %s, Insertions per read base: %s, \
         Deletions per read base: %s, Took: %s seconds" % \
-                    (args, readFastqFile, referenceFastaFile, identity, 
+                    (args, readFastqFile, referenceFastaFile, readIdentity, alignmentIdentity,
                      mismatchesPerAlignedBase, insertionsPerReadBase,
                      deletionsPerReadBase, runTime))
         system("rm -rf %s" % self.jobTree)
