@@ -94,7 +94,7 @@ class TestCase(unittest.TestCase):
         deletionsPerReadBase = numpy.average(map(lambda rAS : rAS.deletionsPerReadBase(), readAlignmentStats))
         
         logger.info("Ran marginAlign with args: %s, with reference: %s and reads: %s. \
-        Got identity: %s, Mismatches per aligned base: %s, Insertions per read base: %s, \
+        Got Read Identity: %s, Alignment Identity: %s, Mismatches per aligned base: %s, Insertions per read base: %s, \
         Deletions per read base: %s, Took: %s seconds" % \
                     (args, readFastqFile, referenceFastaFile, readIdentity, alignmentIdentity,
                      mismatchesPerAlignedBase, insertionsPerReadBase,
