@@ -203,7 +203,7 @@ class TestCase(unittest.TestCase):
     
     #This runs margin stats (just to ensure it runs without falling over)
     def testMarginStats(self):
-        system("%s %s %s %s --identity --mismatchesPerAlignedBase --readCoverage \
+        system("%s %s %s %s --readIdentity --alignmentIdentity --mismatchesPerAlignedBase --readCoverage \
         --deletionsPerReadBase --insertionsPerReadBase --printValuePerReadAlignment" % \
         (self.marginStats, self.inputSamFile1, self.readFastqFile1, self.referenceFastaFile1))
     
