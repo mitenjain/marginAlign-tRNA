@@ -31,8 +31,7 @@ def main():
                       default=0.5, type=float)
     parser.add_option("--matchGamma", dest="matchGamma", help="Set the match gamma for the AMAP function", 
                       default=0.0, type=float)
-    parser.add_option("--minimap2", dest="minimap2", help="Use minimap2 (map-ont) instead of LAST (reports \
-                       1 alignment per read)", 
+    parser.add_option("--minimap2", dest="minimap2", help="Use minimap2 (map-ont) instead of LAST (primary only)", 
                       default=False, action="store_true")
     
     #Add the cPecan expectation maximisation options

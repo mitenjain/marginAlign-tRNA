@@ -3,7 +3,7 @@ from sonLib.bioio import system
 import os
 
 class Minimap2(AbstractMapper):
-    def run(self, args="-ax map-ont"):
+    def run(self, args="-ax map-ont -N 0"):
         localReferenceFastaFile = os.path.join(self.getLocalTempDir(), "ref.fa") #Because BWA builds these crufty index files, copy to a temporary directory
         system("cp %s %s" % (self.referenceFastaFile, localReferenceFastaFile))
         system("minimap2 %s %s %s > %s" % (args, localReferenceFastaFile, self.readFastqFile, self.outputSamFile))
