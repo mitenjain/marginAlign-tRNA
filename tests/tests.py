@@ -132,6 +132,12 @@ class TestCase(unittest.TestCase):
     def testMarginAlignBwaNoRealign(self):
         self.runMarginAlign(self.readFastqFile1, self.referenceFastaFile1, "--bwa --noRealign")
     
+    def testMarginAlignMinimap2(self):
+        self.runMarginAlign(self.readFastqFile1, self.referenceFastaFile1, "--minimap2")
+    
+    def testMarginAlignMinimap2NoRealign(self):
+        self.runMarginAlign(self.readFastqFile1, self.referenceFastaFile1, "--minimap2 --noRealign")
+    
     #The following tests marginCaller
     
     def runMarginCaller(self, samFile, referenceFastaFile, mutationsFile, args=""):

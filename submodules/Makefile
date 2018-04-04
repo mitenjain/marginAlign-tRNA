@@ -1,5 +1,5 @@
 # order is important, libraries first
-modules = sonLib jobTree bwa last cPecan
+modules = sonLib jobTree bwa last cPecan minimap2
 .PHONY: all %.all clean %.clean
 
 all : ${modules:%=all.%} 

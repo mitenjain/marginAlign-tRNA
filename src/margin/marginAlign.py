@@ -6,6 +6,7 @@ from jobTree.src.bioio import logger, setLoggingFromOptions
 from jobTree.scriptTree.stack import Stack
 from margin.mappers.last import Last, LastChain, LastRealign
 from margin.mappers.bwa import Bwa, BwaChain, BwaRealign
+from margin.mappers.minimap2 import Minimap2, Minimap2Chain, Minimap2Realign
 from margin.utils import pathToBaseNanoporeDir
 import cPecan.cPecanEm
 from cPecan.cPecanEm import addExpectationMaximisationOptions
@@ -30,6 +31,8 @@ def main():
                       default=0.5, type=float)
     parser.add_option("--matchGamma", dest="matchGamma", help="Set the match gamma for the AMAP function", 
                       default=0.0, type=float)
+    parser.add_option("--minimap2", dest="minimap2", help="Use minimap2 (map-ont) instead of LAST", 
+                      default=False, action="store_true")
     
     #Add the cPecan expectation maximisation options
     options = cPecan.cPecanEm.Options()
@@ -71,11 +74,26 @@ def main():
     #Set the mapper
     if options.noRealign:
         if options.noChain: # i.e. --noChain --noRealign
-            mapper = Bwa if options.bwa else Last
+            if options.bwa:
+                mapper = Bwa
+            elif options.minimap2:
+                mapper = Minimap2
+            else:
+                mapper = Last
         else: # i.e. --noRealign
-            mapper = BwaChain if options.bwa else LastChain
+            if options.bwa:
+                mapper = BwaChain
+            elif options.minimap2:
+                mapper = Minimap2Chain
+            else:
+                mapper = LastChain
     else:
-        mapper = BwaRealign if options.bwa else LastRealign
+        if options.bwa:
+	    mapper = BwaRealign
+        elif options.minimap2:
+	    mapper = Minimap2Realign
+        else:
+	    mapper = LastRealign
     
     #This line invokes jobTree  
     i = Stack(mapper(readFastqFile=args[0], referenceFastaFile=args[1], outputSamFile=args[2], 
