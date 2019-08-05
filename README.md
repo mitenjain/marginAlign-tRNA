@@ -23,7 +23,7 @@ path on the filesystem.
 ### Creating a virtual environment to handle python dependencies
 marginAlign uses numpy, pysam and PyVcf (see requirements.txt for versions used). The system python could be used if these dependencies are present. Otherwise, a virtual environment can be created by running the following command in the margin base directory:
 
-    virtualenv --no-site-packages --distribute env && source env/bin/activate && pip install -r requirements.txt
+    virtualenv --python=python2.7 --no-site-packages --distribute env && source env/bin/activate && pip install -r requirements.txt
 
 Creation of a virtual environment requires that machine has an existing installation of [pip](https://pip.pypa.io/en/latest/index.html) and [virtualenv](https://virtualenv.pypa.io/en/latest/index.html).
 
